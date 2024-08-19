@@ -11,7 +11,7 @@ const Sidebar = () => (
             </Link>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Link href="#" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8">
+                    <Link href="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8">
                         <Home className="h-5 w-5" />
                         <span className="sr-only">Dashboard</span>
                     </Link>
@@ -21,26 +21,26 @@ const Sidebar = () => (
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Link
-                        href="#"
+                        href=""
                         className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
                     >
                         <ShoppingCart className="h-5 w-5" />
-                        <span className="sr-only">Orders</span>
+                        <span className="sr-only">Departements</span>
                     </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Orders</TooltipContent>
+                <TooltipContent side="right">Departements</TooltipContent>
             </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Link
-                        href="#"
+                        href="/add-departements"
                         className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
                     >
                         <Package className="h-5 w-5" />
-                        <span className="sr-only">Products</span>
+                        <span className="sr-only">Add Departements</span>
                     </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Products</TooltipContent>
+                <TooltipContent side="right">Add Departements</TooltipContent>
             </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -49,10 +49,10 @@ const Sidebar = () => (
                         className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
                     >
                         <Users2 className="h-5 w-5" />
-                        <span className="sr-only">Customers</span>
+                        <span className="sr-only">Users</span>
                     </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Customers</TooltipContent>
+                <TooltipContent side="right">Users</TooltipContent>
             </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -61,13 +61,13 @@ const Sidebar = () => (
                         className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
                     >
                         <LineChart className="h-5 w-5" />
-                        <span className="sr-only">Analytics</span>
+                        <span className="sr-only">Notifications</span>
                     </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Analytics</TooltipContent>
+                <TooltipContent side="right">Notifications</TooltipContent>
             </Tooltip>
         </nav>
-        <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+        {/* <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Link href="#" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8">
@@ -77,7 +77,7 @@ const Sidebar = () => (
                 </TooltipTrigger>
                 <TooltipContent side="right">Settings</TooltipContent>
             </Tooltip>
-        </nav>
+        </nav> */}
     </aside>
 );
 
