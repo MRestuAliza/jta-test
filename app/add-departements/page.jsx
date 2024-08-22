@@ -5,92 +5,122 @@ import Sidebar from '@/components/General/Sidebar'
 import Header from "@/components/General/Header"
 import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 
-export default function page() {
-  const [isFacultyFormEnabled, setIsFacultyFormEnabled] = useState(false)
+export default function Page() {
+  const [selectedOption, setSelectedOption] = useState('');
+  const [selectedFaculty, setSelectedFaculty] = useState('');
+  const [isDataExist, setIsDataExist] = useState(null);
 
-  const handleCheckboxChange = (e) => {
-    setIsFacultyFormEnabled(e)
-  }
+  const handleSelectChange = (value) => {
+    setSelectedOption(value);
+
+    if (value === 'university') {
+      setSelectedFaculty('');
+    }
+  };
+
+  const handleFacultySelectChange = (value) => {
+    setSelectedFaculty(value);
+  };
+
+  const handleDataExistChange = (value) => {
+    setIsDataExist(value === 'Yes');
+    if (value === 'No') {
+      setSelectedOption('');
+      setSelectedFaculty('');
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar />
       <div className='flex flex-col sm:gap-4 sm:py-4 sm:pl-14'>
-        <Header BreadcrumbLinkTitle={"Add Departements"} />
+        <Header BreadcrumbLinkTitle={"Add Departments"} />
         <main className='p-4 space-y-4'>
           <div className="grid gap-6">
+
+            {/* Data Exist Selection */}
             <div className="grid gap-3">
-              <Label htmlFor="status">Does the department data already exist?</Label>
-              <Select>
-                <SelectTrigger id="status" aria-label="Select status">
+              <Label htmlFor="data-exist">Does the department data already exist?</Label>
+              <Select onValueChange={handleDataExistChange}>
+                <SelectTrigger id="data-exist" aria-label="Data exist">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Yes</SelectItem>
-                  <SelectItem value="published">No</SelectItem>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid gap-3">
-              <Label htmlFor="status">Select level</Label>
-              <Select>
-                <SelectTrigger id="status" aria-label="Select status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">University</SelectItem>
-                  <SelectItem value="published">Faculty</SelectItem>
-                  <SelectItem value="archived">Study Program</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox id="include" onCheckedChange={handleCheckboxChange} />
-              <label
-                htmlFor="include"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Enable Faculty Form.
-              </label>
-            </div>
-
-            {isFacultyFormEnabled && (
+            {/* Level Selection */}
+            {isDataExist !== null && (
               <div className="grid gap-3">
-                <div>
-                  <Label htmlFor="name">Faculty Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="name">Name of Study Program</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    className="w-full"
-                  />
-                  <div className="flex justify-center pt-3">
-                    <Button size="sm" variant="ghost" className="gap-1">
-                      <PlusCircle className="h-3.5 w-3.5" />
-                      Add Study Program Form
-                    </Button>
-                  </div>
-                </div>
-
+                <Label htmlFor="level">Select level</Label>
+                <Select onValueChange={handleSelectChange}>
+                  <SelectTrigger id="level" aria-label="Select level">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="university">University</SelectItem>
+                    <SelectItem value="faculty">Faculty</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
+
+            {/* University Form */}
+            {selectedOption === 'university' && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                <div>
+                  <Label htmlFor="university-link">Name</Label>
+                  <Input id="university-link" placeholder="Enter the university website link" />
+                </div>
+                <div>
+                  <Label htmlFor="university-link">Website Link</Label>
+                  <Input id="university-link" placeholder="Enter the university website link" />
+                </div>
+              </div>
+            )}
+
+            {/* Faculty Selection Form */}
+            {selectedOption === 'faculty' && (
+              <div className="grid gap-3">
+                <Label htmlFor="faculty">Select faculty</Label>
+                <Select onValueChange={handleFacultySelectChange}>
+                  <SelectTrigger id="faculty" aria-label="Select faculty">
+                    <SelectValue placeholder="Select faculty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="engineering">Faculty of Engineering</SelectItem>
+                    <SelectItem value="agriculture">Faculty of Agriculture</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Study Program Selection Form */}
+            {selectedFaculty && (
+              <div className="grid gap-3">
+                <Label htmlFor="study-program">Select Study Program</Label>
+                <Select id="study-program" aria-label="Select study program">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select study program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="informatics">Informatics</SelectItem>
+                    <SelectItem value="civil-engineering">Civil Engineering</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="flex pt-4 flex-col mx-auto gap-4">
               <Button className="w-96">Submit</Button>
-              <Button variant="outline" className="w-96">Cancle</Button>
+              <Button variant="outline" className="w-96">Cancel</Button>
             </div>
           </div>
         </main>

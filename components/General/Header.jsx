@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image"
 import Link from "next/link"
+import { signOut } from "next-auth/react";
 import {
     Home,
     LineChart,
@@ -135,7 +138,7 @@ const Header = ({BreadcrumbLinkTitle}) => (
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()}>Logout]</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     </header>

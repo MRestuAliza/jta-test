@@ -1,10 +1,10 @@
 import Image from "next/image";
-import { LoginForm } from "./login/page";
+import Landing from "./landing";
 
 export default function Home() {
   return (
     <>
-      <LoginForm />
+      <Landing />
     </>
   );
 }
