@@ -1,30 +1,14 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Image from "next/image"
-import Link from "next/link"
 import {
-  File,
-  Home,
-  LineChart,
   ListFilter,
   MoreHorizontal,
-  Package,
-  Package2,
-  PanelLeft,
-  PlusCircle,
-  Search,
-  Settings,
-  ShoppingCart,
-  Users2,
+  UserPen
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -43,8 +27,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   Table,
   TableBody,
@@ -59,20 +41,59 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import Sidebar from "@/components/General/Sidebar"
 import Header from "@/components/General/Header"
+import { useSession } from "next-auth/react";
 
 export default function page() {
+  const { status, data: session } = useSession();
+  const [users, setUsers] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [roleFilter, setRoleFilter] = useState('');
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchUsers();
+      // fetchDepartments();
+    }
+  }, [status, session, refreshKey]);
+
+  const fetchUsers = async () => {
+    try {
+      if (session?.user?.role) {
+        const response = await fetch('/api/auth/users', {
+          headers: {
+            'X-User-Role': session.user.role
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    if (roleFilter === 'Admin') {
+      return user.role.includes('Admin') && user.role !== 'Super Admin';
+    }
+    else {
+      return user.role.includes(roleFilter);
+    }
+  });
+
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar />
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <Header BreadcrumbLinkTitle={"User"}/> 
+        <Header BreadcrumbLinkTitle={"User"} />
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
             <div className="flex items-center">
@@ -106,16 +127,16 @@ export default function page() {
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-8 gap-1">
+                {/* <Button size="sm" variant="outline" className="h-8 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
-                </Button>
+                </Button> */}
                 <Button size="sm" className="h-8 gap-1">
-                  <PlusCircle className="h-3.5 w-3.5" />
+                  <UserPen className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Add Product
+                    Edit role
                   </span>
                 </Button>
               </div>
@@ -123,10 +144,7 @@ export default function page() {
             <TabsContent value="all">
               <Card x-chunk="dashboard-06-chunk-0">
                 <CardHeader>
-                  <CardTitle>Products</CardTitle>
-                  <CardDescription>
-                    Manage your products and view their sales performance.
-                  </CardDescription>
+                  <CardTitle>List Users</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -151,8 +169,58 @@ export default function page() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
+
                     <TableBody>
-                      <TableRow>
+                      {filteredUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="hidden sm:table-cell">
+                            {user.profilePicture ? (
+                              <Image className="h-10 w-10 rounded-full" width={500} height={500} src={user.profilePicture} alt="Avatar Tailwind CSS Component" />
+                            ) : (
+                              <svg className="w-10  h-10 text-gray-800 dark:text-white" ariaHidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                              </svg>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {user.name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{user.role}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {user.nim ? user.nim : '-'}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {user.email}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {user.createdAt}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  aria-haspopup="true"
+                                  size="icon"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Toggle menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+
+                      {/* <TableRow>
                         <TableCell className="hidden sm:table-cell">
                           <Image
                             alt="Product image"
@@ -196,8 +264,10 @@ export default function page() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
-                      </TableRow>
-                      <TableRow>
+                      </TableRow> */}
+
+
+                      {/* <TableRow>
                         <TableCell className="hidden sm:table-cell">
                           <Image
                             alt="Product image"
@@ -241,98 +311,8 @@ export default function page() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="hidden sm:table-cell">
-                          <Image
-                            alt="Product image"
-                            className="aspect-square rounded-md object-cover"
-                            height="64"
-                            src="/placeholder.svg"
-                            width="64"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          Laser Lemonade Machine
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Draft</Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          F1D021113
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          restualizaakbar@gmal.com
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-07-12 10:42 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="hidden sm:table-cell">
-                          <Image
-                            alt="Product image"
-                            className="aspect-square rounded-md object-cover"
-                            height="64"
-                            src="/placeholder.svg"
-                            width="64"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          Laser Lemonade Machine
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Draft</Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          F1D021113
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          restualizaakbar@gmal.com
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          2023-07-12 10:42 AM
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      
+                      </TableRow> */}
+
                     </TableBody>
                   </Table>
                 </CardContent>

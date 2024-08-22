@@ -138,7 +138,7 @@ const Header = ({BreadcrumbLinkTitle}) => (
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>Logout]</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     </header>

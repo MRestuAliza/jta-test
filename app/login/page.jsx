@@ -1,4 +1,5 @@
 "use client"
+
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from "next/link"
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import Loading from '@/components/General/Loading';
 
 export function LoginForm() {
     const router = useRouter();
@@ -20,6 +22,7 @@ export function LoginForm() {
         email: '',
         password: ''
     });
+    const [loadingForm, setLoadingForm] = useState(false);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -28,7 +31,7 @@ export function LoginForm() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        setLoadingForm(true);
         const res = await signIn('credentials', {
             redirect: false,
             email: formData.email,
@@ -40,6 +43,8 @@ export function LoginForm() {
         } else {
             // setError(res.error);
             setLoadingForm(false);
+            console.log('Login failed:', res.error);
+
         }
     };
 
@@ -97,7 +102,7 @@ export function LoginForm() {
                                 <Input id="password" type="password" name="password" required value={formData.password} onChange={handleInputChange} />
                             </div>
                             <Button type="submit" className="w-full">
-                                Login
+                                {loadingForm ? <Loading />: "Login"}
                             </Button>
                         </form>
                         <Button onClick={handleGoogleSignIn} variant="outline" className="w-full pt-2">

@@ -75,9 +75,6 @@ export const authOptions = {
         }
       }
       return true;
-    },
-    async redirect({  baseUrl }) {
-      return baseUrl + '/dashboard';
     }
   }
 };
