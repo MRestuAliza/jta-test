@@ -40,7 +40,7 @@ function DepartmentPage() {
     const params = useParams();
     const slug = params.slug || [];
 
-    console.log("slug:", slug.length); // This will log the entire array of segments
+    console.log("slug:", slug[1]); // This will log the entire array of segments
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -76,8 +76,8 @@ function DepartmentPage() {
     // };
     const fetchDepartments = async () => {
         try {
-            let universityResponse, fakultasResponse;
-            let universityData, fakultasData;
+            let universityResponse, fakultasResponse,prodiResponse;
+            let universityData, fakultasData, prodiData;
             let combinedData = [];
 
             if (slug.length === 1) {
@@ -97,13 +97,15 @@ function DepartmentPage() {
                     console.error("Error fetching data from one or both APIs");
                 }
             } else if (slug.length === 2) {
-                universityResponse = await fetch(`/api/website/university`);
-                universityData = await universityResponse.json();
+                prodiResponse = await fetch(`/api/website/prodi/${slug[1]}`);
 
-                if (universityData.success) {
-                    combinedData = [...universityData.data];
+                prodiData = await prodiResponse.json();
+                console.log("prodiData", prodiData);
+
+                if (prodiData.success) {
+                    combinedData = [...prodiData.data];
                 } else {
-                    console.error("Error fetching university data:", universityData.message);
+                    console.error("Error fetching university data:", prodiData.message);
                 }
             } else {
                 console.error("Unexpected slug length");

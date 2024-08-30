@@ -10,24 +10,24 @@ export async function GET(req, { params }) {
 
     try {
         const objectIdFakultas = new mongoose.Types.ObjectId(id);
-        const websites = await Website.find({
-            fakultas_id: objectIdFakultas,
-            type: { $ne: 'Prodi' }
-        }).populate('fakultas_id').populate('university_id');
 
-        const prodi = await Prodi.find({ fakultas_id: objectIdFakultas }).populate('fakultas_id');
-        const allData = { websites, prodi };
-        return new Response(JSON.stringify({ success: true, data: allData }), {
+        const websites = await Website.find({ prodi_id: objectIdFakultas}).populate('prodi_id');
+        // const prodi = await Prodi.find({ prodi_id: objectIdFakultas }).populate('prodi_id');
+
+        // const allData = {
+        //     websites,
+        //     prodi,
+        // };
+        return new Response(JSON.stringify({ success: true, data: websites }), {
             status: 200,
         });
-
+        
     } catch (error) {
         return new Response(JSON.stringify({ success: false, error: error.message }), {
             status: 500,
         });
     }
 }
-
 
 export async function POST(req, res) {
     await connectMongoDB();
@@ -40,6 +40,7 @@ export async function POST(req, res) {
             type: body.type,
             university_id: body.university_id,
             fakultas_id: body.fakultas_id,
+            prodi_id: body.prodi_id,
         });
 
         return new Response(JSON.stringify({ success: true, data: newWebsite }), {
