@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/General/Navbar";
+import Hero from "@/components/Landing/HeroSection";
 
 
 export default function Landing() {
@@ -6,6 +7,7 @@ export default function Landing() {
         <div>
             <>
                 <Navbar />
+                <Hero />
             </>
         </div>
     )

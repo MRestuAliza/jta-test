@@ -8,8 +8,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
+import withAuth from "@/libs/withAuth";
 
-export default function Page() {
+function page() {
   const [selectedOption, setSelectedOption] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState('');
   const [isDataExist, setIsDataExist] = useState(null);
@@ -128,3 +129,5 @@ export default function Page() {
     </div>
   )
 }
+
+export default withAuth(page)

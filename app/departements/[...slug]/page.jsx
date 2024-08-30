@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-// import { useRouter } from 'next/router';
+import { useParams } from 'next/navigation';
 import Link from "next/link";
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
@@ -37,34 +37,85 @@ import { formatDate } from '@/libs/dateUtils';
 function DepartmentPage() {
     const [departments, setDepartments] = useState([]);
     const { status } = useSession();
-    // const router = useRouter();
-    // const { slug } = router.query;
-    
+    const params = useParams();
+    const slug = params.slug || [];
+
+    console.log("slug:", slug.length); // This will log the entire array of segments
 
     useEffect(() => {
         if (status === "authenticated") {
             fetchDepartments();
         }
-    }, [status]);
+    }, [status, slug]);
 
+    // const fetchDepartments = async () => {
+    //     try {
+    //         const [universityResponse, fakultasResponse] = await Promise.all([
+    //             fetch(`/api/website/university`),
+    //             fetch(`/api/website/fakultas/${slug}`)
+    //         ]);
+
+    //         const universityData = await universityResponse.json();
+    //         const fakultasData = await fakultasResponse.json();            
+    //         if (universityData.success && fakultasData.success) {    
+    //             const combinedData = [
+    //                 ...universityData.data,
+    //                 ...fakultasData.data.websites, 
+    //                 ...fakultasData.data.prodi
+    //             ];
+    //             console.log("combined", combinedData);
+
+    //             setDepartments(combinedData);
+    //             console.log(combinedData);
+    //         } else {
+    //             console.error("Error fetching data from one or both APIs");
+    //         }
+    //     } catch (error) {
+    //         console.error("Error fetching data:", error);
+    //     }
+    // };
     const fetchDepartments = async () => {
         try {
-            const response = await fetch(`/api/website/university/${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
-            const data = await response.json();
+            let universityResponse, fakultasResponse;
+            let universityData, fakultasData;
+            let combinedData = [];
 
-            // Pisahkan data dengan type 'University' dan 'Fakultas'
-            const universityData = data.data.websites.filter(item => item.type === 'University');
-            const fakultasData = data.data.fakultas;
+            if (slug.length === 1) {
+                // Fetch data when there are two segments in the URL
+                universityResponse = await fetch(`/api/website/university`);
+                fakultasResponse = await fetch(`/api/website/fakultas/${slug[0]}`);
 
-            // Gabungkan data kembali dengan 'University' di bagian atas
-            const combinedData = [...universityData, ...fakultasData];
+                [universityData, fakultasData] = await Promise.all([universityResponse.json(), fakultasResponse.json()]);
+
+                if (universityData.success && fakultasData.success) {
+                    combinedData = [
+                        ...universityData.data,
+                        ...fakultasData.data.websites,
+                        ...fakultasData.data.prodi
+                    ];
+                } else {
+                    console.error("Error fetching data from one or both APIs");
+                }
+            } else if (slug.length === 2) {
+                universityResponse = await fetch(`/api/website/university`);
+                universityData = await universityResponse.json();
+
+                if (universityData.success) {
+                    combinedData = [...universityData.data];
+                } else {
+                    console.error("Error fetching university data:", universityData.message);
+                }
+            } else {
+                console.error("Unexpected slug length");
+                return;
+            }
 
             setDepartments(combinedData);
-            console.log(combinedData);
+            console.log("combinedData", combinedData);
         } catch (error) {
-            console.error(error);
+            console.error("Error fetching data:", error);
         }
-    }
+    };
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -132,7 +183,7 @@ function DepartmentPage() {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem>
-                                                                    <Link className='w-full' href={`/departements/${department._id}`}>Open</Link>
+                                                                    <Link className='w-full' href={`/departements/${slug}/${department._id}`}>Open</Link>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem>Edit</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
@@ -151,7 +202,7 @@ function DepartmentPage() {
                 </main>
             </div >
         </div >
-    )
+    );
 }
 
 export default withAuth(DepartmentPage);

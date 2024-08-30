@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, ShoppingCart, Package, Users2, LineChart, Settings } from "lucide-react";
+import { Home, List, ListPlus, Package, Users2, LineChart, Settings } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Sidebar = () => (
@@ -24,7 +24,7 @@ const Sidebar = () => (
                         href="/departements"
                         className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
                     >
-                        <ShoppingCart className="h-5 w-5" />
+                        <List className="h-5 w-5" />
                         <span className="sr-only">Departements</span>
                     </Link>
                 </TooltipTrigger>
@@ -36,7 +36,7 @@ const Sidebar = () => (
                         href="/add-departements"
                         className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
                     >
-                        <Package className="h-5 w-5" />
+                        <ListPlus className="h-5 w-5" />
                         <span className="sr-only">Add Departements</span>
                     </Link>
                 </TooltipTrigger>

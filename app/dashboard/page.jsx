@@ -1,3 +1,4 @@
+"use client"
 
 import Link from "next/link"
 import {
@@ -8,12 +9,6 @@ import {
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -23,8 +18,6 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
     Table,
     TableBody,
@@ -36,6 +29,7 @@ import {
 import Chart from "../../components/Dashboard/Chart"
 import Sidebar from "@/components/General/Sidebar"
 import Header from "@/components/General/Header"
+import withAuth from "@/libs/withAuth"
 
 export function Dashboard() {
     return (
@@ -367,4 +361,4 @@ export function Dashboard() {
     )
 }
 
-export default Dashboard;
+export default withAuth(Dashboard)
