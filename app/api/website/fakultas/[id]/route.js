@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
         const websites = await Website.find({
             fakultas_id: objectIdFakultas,
             type: { $ne: 'Prodi' }
-        }).populate('fakultas_id').populate('university_id');
+        }).populate('fakultas_id')
 
         const prodi = await Prodi.find({ fakultas_id: objectIdFakultas }).populate('fakultas_id');
         const allData = { websites, prodi };

@@ -9,15 +9,13 @@ export async function GET(req, { params }) {
     await connectMongoDB();
 
     try {
-        // Konversi universityId dari string ke ObjectId
         const objectIdUniversity = new mongoose.Types.ObjectId(id);
         console.log("id university", objectIdUniversity);
         
-        // Ambil semua data Website yang sesuai dengan university_id
-        const websites = await Website.find({ university_id: objectIdUniversity }).populate('university_id');
+        const websites = await Website.find({ university_id: objectIdUniversity });
+        console.log(websites);
         
-        // Ambil semua data Fakultas yang sesuai dengan university_id
-        const fakultas = await Fakultas.find({ university_id: objectIdUniversity }).populate('university_id');
+        const fakultas = await Fakultas.find({ university_id: objectIdUniversity })
 
         // Gabungkan hasil dari Website dan Fakultas
         const allData = {

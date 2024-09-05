@@ -52,6 +52,9 @@ function DepartmentPage() {
             const response = await fetch(`/api/website/university/${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
             const data = await response.json();
 
+            console.log(data);
+            
+
             // Pisahkan data dengan type 'University' dan 'Fakultas'
             const universityData = data.data.websites.filter(item => item.type === 'University');
             const fakultasData = data.data.fakultas;
