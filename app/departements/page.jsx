@@ -56,7 +56,7 @@ function DepartmentPage() {
             
 
             // Pisahkan data dengan type 'University' dan 'Fakultas'
-            const universityData = data.data.websites.filter(item => item.type === 'University');
+            const universityData = data.data.websites.filter(item => item.type === 'Universitas');
             const fakultasData = data.data.fakultas;
 
             // Gabungkan data kembali dengan 'University' di bagian atas

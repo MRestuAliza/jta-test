@@ -1,7 +1,6 @@
 import { connectMongoDB } from "@/libs/mongodb";
 import Fakultas from "@/models/fakultasSchema";
 
-// Handle GET request
 export async function GET(req, res) {
   await connectMongoDB();
 
