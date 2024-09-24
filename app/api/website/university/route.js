@@ -8,7 +8,7 @@ export async function GET(req, { params }) {
 
     try {
         // const universityList = await Web.find({type: 'university'}).populate('university_id');
-        const universityList = await Web.find({type: 'University'})
+        const universityList = await Web.find({type: 'Universitas'})
         console.log(universityList);
         
         return new Response(JSON.stringify({ success: true, data: universityList }), {

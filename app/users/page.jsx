@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatDate } from '@/libs/dateUtils';
 
 function DialogDemo({ isOpen, onClose, user }) {
   return (
@@ -256,7 +257,7 @@ function Page() {
                             {user.email}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {user.createdAt}
+                            {formatDate(user.createdAt)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>

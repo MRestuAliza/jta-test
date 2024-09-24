@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, List, ListPlus, Package, Users2, LineChart, Settings } from "lucide-react";
+import { Home, List, ListPlus, Package, Users2, LineChart, Mail, Settings } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouter,usePathname } from 'next/navigation';
 
@@ -60,6 +60,18 @@ const Sidebar = () => {
                         </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right">Users</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Link
+                            href="/saran"
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/saran" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
+                        >
+                            <Mail className="h-5 w-5" />
+                            <span className="sr-only">Tambah group saran</span>
+                        </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Tambah group saran</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                     <TooltipTrigger asChild>

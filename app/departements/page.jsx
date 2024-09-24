@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-// import { useRouter } from 'next/router';
 import Link from "next/link";
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
@@ -31,15 +30,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"; // Hapus AlertDialogTrigger
 import withAuth from '@/libs/withAuth';
 import { formatDate } from '@/libs/dateUtils';
 
 function DepartmentPage() {
     const [departments, setDepartments] = useState([]);
     const { status } = useSession();
-    // const router = useRouter();
-    // const { slug } = router.query;
-    
+    const [deleteId, setDeleteId] = useState(null); // State untuk menyimpan ID yang akan dihapus
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -52,20 +50,41 @@ function DepartmentPage() {
             const response = await fetch(`/api/website/university/${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
             const data = await response.json();
 
-            console.log(data);
-            
-
-            // Pisahkan data dengan type 'University' dan 'Fakultas'
             const universityData = data.data.websites.filter(item => item.type === 'Universitas');
             const fakultasData = data.data.fakultas;
 
-            // Gabungkan data kembali dengan 'University' di bagian atas
             const combinedData = [...universityData, ...fakultasData];
 
             setDepartments(combinedData);
             console.log(combinedData);
         } catch (error) {
             console.error(error);
+        }
+    }
+
+    const deleteDepartment = async (id) => {
+        try {
+            const response = await fetch(`/api/departments/fakultas?id=${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setDepartments(departments.filter(department => department._id !== id));
+                alert('Department deleted successfully');
+            } else {
+                const errorData = await response.json();
+                alert(`Error: ${errorData.message}`);
+            }
+        } catch (error) {
+            console.error('Error deleting department:', error);
+            alert('An error occurred while deleting the department');
+        }
+    }
+
+    const handleDelete = () => {
+        if (deleteId) {
+            deleteDepartment(deleteId);
+            setDeleteId(null);
         }
     }
 
@@ -110,7 +129,7 @@ function DepartmentPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {departments.map((department) => (
-                                                <TableRow key={department.id}>
+                                                <TableRow key={department._id}>
                                                     <TableCell>
                                                         <div className="font-medium">{department.name}</div>
                                                     </TableCell>
@@ -139,7 +158,8 @@ function DepartmentPage() {
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem>Edit</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                                                {/* Ubah ini untuk memicu dialog */}
+                                                                <DropdownMenuItem className='text-red-500' onClick={() => setDeleteId(department._id)}>Delete</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
@@ -152,8 +172,22 @@ function DepartmentPage() {
                         </Card>
                     </div>
                 </main>
-            </div >
-        </div >
+            </div>
+
+            {/* Dialog Konfirmasi Hapus */}
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Konfirmasi Menghapus {departments.find(department => department._id === deleteId)?.name}</AlertDialogTitle>
+                        <AlertDialogDescription>Apakah Anda yakin ingin menghapus data ini? Semua data program studi, saran, dan website yang terkait juga akan dihapus</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     )
 }
 

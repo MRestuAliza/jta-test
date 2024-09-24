@@ -13,13 +13,18 @@ export const authOptions = {
         password: { label: 'Password', type: 'password' }
       },
       authorize: async (credentials) => {
-        await connectMongoDB();
-        const user = await User.findOne({ email: credentials.email });
-
-        if (user && bcrypt.compareSync(credentials.password, user.password)) {
-          return { id: user._id, name: user.name, email: user.email, role: user.role };
-        } else {
-          return null;
+        try {
+          await connectMongoDB();
+          const user = await User.findOne({ email: credentials.email });
+      
+          if (user && bcrypt.compareSync(credentials.password, user.password)) {
+            return { id: user._id, name: user.name, email: user.email, role: user.role };
+          } else {
+            throw new Error('InvalidCredentials');
+          }
+        } catch (error) {
+          console.error('Error in authorization:', error);
+          throw new Error('AuthorizationFailed');
         }
       }
     }),
@@ -31,8 +36,8 @@ export const authOptions = {
   secret: process.env.SECRET,
   session: {
     jwt: true,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
+    maxAge: 60 * 60, // 1 hour
+    updateAge: 60 * 60, 
     cookie: {
       secure: process.env.NODE === 'production',
       httpOnly: true,

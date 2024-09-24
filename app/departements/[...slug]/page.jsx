@@ -33,14 +33,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import withAuth from '@/libs/withAuth';
 import { formatDate } from '@/libs/dateUtils';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 function DepartmentPage() {
     const [departments, setDepartments] = useState([]);
     const { status } = useSession();
     const params = useParams();
     const slug = params.slug || [];
-
-    console.log("slug:", slug[1]); // This will log the entire array of segments
+    const [deleteId, setDeleteId] = useState(null);
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -48,40 +48,13 @@ function DepartmentPage() {
         }
     }, [status, slug]);
 
-    // const fetchDepartments = async () => {
-    //     try {
-    //         const [universityResponse, fakultasResponse] = await Promise.all([
-    //             fetch(`/api/website/university`),
-    //             fetch(`/api/website/fakultas/${slug}`)
-    //         ]);
-
-    //         const universityData = await universityResponse.json();
-    //         const fakultasData = await fakultasResponse.json();            
-    //         if (universityData.success && fakultasData.success) {    
-    //             const combinedData = [
-    //                 ...universityData.data,
-    //                 ...fakultasData.data.websites, 
-    //                 ...fakultasData.data.prodi
-    //             ];
-    //             console.log("combined", combinedData);
-
-    //             setDepartments(combinedData);
-    //             console.log(combinedData);
-    //         } else {
-    //             console.error("Error fetching data from one or both APIs");
-    //         }
-    //     } catch (error) {
-    //         console.error("Error fetching data:", error);
-    //     }
-    // };
     const fetchDepartments = async () => {
         try {
-            let universityResponse, fakultasResponse,prodiResponse;
+            let universityResponse, fakultasResponse, prodiResponse;
             let universityData, fakultasData, prodiData;
             let combinedData = [];
 
             if (slug.length === 1) {
-                // Fetch data when there are two segments in the URL
                 universityResponse = await fetch(`/api/website/university`);
                 fakultasResponse = await fetch(`/api/website/fakultas/${slug[0]}`);
 
@@ -98,12 +71,16 @@ function DepartmentPage() {
                 }
             } else if (slug.length === 2) {
                 prodiResponse = await fetch(`/api/website/prodi/${slug[1]}`);
+                universityResponse = await fetch(`/api/website/university`);
 
                 prodiData = await prodiResponse.json();
-                console.log("prodiData", prodiData);
+                universityResponse = await universityResponse.json();
 
                 if (prodiData.success) {
-                    combinedData = [...prodiData.data];
+                    combinedData = [
+                        ...universityResponse.data,
+                        ...prodiData.data,
+                    ];
                 } else {
                     console.error("Error fetching university data:", prodiData.message);
                 }
@@ -118,6 +95,40 @@ function DepartmentPage() {
             console.error("Error fetching data:", error);
         }
     };
+
+    const deleteDepartment = async (id) => {
+        try {
+            const department = departments.find(dept => dept._id === id);
+            let response;
+            if (department && department.type) {
+                response = await fetch(`/api/website?id=${id}`, {
+                    method: 'DELETE'
+                });
+            } else {
+                response = await fetch(`/api/departments/fakultas/prodi/${id}`, {
+                    method: 'DELETE'
+                });
+            }
+
+            if (response.ok) {
+                setDepartments(departments.filter(department => department._id !== id));
+                alert('Department deleted successfully');
+            } else {
+                const errorData = await response.json();
+                alert(`Error: ${errorData.message}`);
+            }
+        } catch (error) {
+            console.error('Error deleting department:', error);
+            alert('An error occurred while deleting the department');
+        }
+    }
+
+    const handleDelete = () => {
+        if (deleteId) {
+            deleteDepartment(deleteId);
+            setDeleteId(null);
+        }
+    }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -160,7 +171,7 @@ function DepartmentPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {departments.map((department) => (
-                                                <TableRow key={department.id}>
+                                                <TableRow key={department._id}>
                                                     <TableCell>
                                                         <div className="font-medium">{department.name}</div>
                                                     </TableCell>
@@ -189,7 +200,7 @@ function DepartmentPage() {
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem>Edit</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                                                <DropdownMenuItem className='text-red-500' onClick={() => setDeleteId(department._id)}>Delete</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>
@@ -203,6 +214,18 @@ function DepartmentPage() {
                     </div>
                 </main>
             </div >
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Konfirmasi Menghapus {departments.find(department => department._id === deleteId)?.name}</AlertDialogTitle>
+                        <AlertDialogDescription>Apakah Anda yakin ingin menghapus data ini? Semua data program studi, saran, dan website yang terkait juga akan dihapus</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div >
     );
 }

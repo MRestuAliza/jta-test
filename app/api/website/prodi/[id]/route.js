@@ -11,7 +11,7 @@ export async function GET(req, { params }) {
     try {
         const objectIdFakultas = new mongoose.Types.ObjectId(id);
 
-        const websites = await Website.find({ prodi_id: objectIdFakultas}).populate('prodi_id');
+        const websites = await Website.find({ prodi_id: objectIdFakultas }).populate('prodi_id');
         // const prodi = await Prodi.find({ prodi_id: objectIdFakultas }).populate('prodi_id');
 
         // const allData = {
@@ -21,7 +21,7 @@ export async function GET(req, { params }) {
         return new Response(JSON.stringify({ success: true, data: websites }), {
             status: 200,
         });
-        
+
     } catch (error) {
         return new Response(JSON.stringify({ success: false, error: error.message }), {
             status: 500,

@@ -34,7 +34,6 @@ export function Navbar() {
                         <Button type="submit" className="relative">
                             Login
                         </Button>
-
                     </Link>
                 </div>
             </header>
