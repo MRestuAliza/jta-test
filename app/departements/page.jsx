@@ -100,8 +100,14 @@ function DepartmentPage() {
                     }),
                 });
             } else {
-                response = await fetch(`/api/departments/fakultas/prodi/${id}`, {
-                    method: 'DELETE'
+                response = await fetch(`/api/departments/fakultas?id=${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: department.name
+                    }),
                 });
             }
 

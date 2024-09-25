@@ -33,7 +33,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import withAuth from '@/libs/withAuth';
 import { formatDate } from '@/libs/dateUtils';
+import { Label } from "@/components/ui/label"
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import Swal from 'sweetalert2';
 
 function DepartmentPage() {
     const [departments, setDepartments] = useState([]);
@@ -41,6 +43,8 @@ function DepartmentPage() {
     const params = useParams();
     const slug = params.slug || [];
     const [deleteId, setDeleteId] = useState(null);
+    const [editId, setEditId] = useState(null);
+
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -123,12 +127,94 @@ function DepartmentPage() {
         }
     }
 
+    const updateDepartment = async (id) => {
+        try {
+            const department = departments.find(dept => dept._id === id);
+            let response;
+            if (department && department.type) {
+                response = await fetch(`/api/website/university/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: department.name,
+                        link: department.link,
+                    }),
+                });
+            } else {
+                response = await fetch(`/api/departments/prodi?id=${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: department.name
+                    }),
+                });
+            }
+
+            if (response.ok) {
+                // setDepartments(departments.filter(department => department._id !== id));
+                const updatedDepartment = await response.json();
+                setDepartments(departments.map(department =>
+                    department._id === id ? updatedDepartment.data : department
+                ));
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Sukses',
+                    text: 'Sukses Mengupdate Data',
+                    timer: 1000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
+                // alert('Department updated successfully');
+            } else {
+                const errorData = await response.json();
+                console.log(`Error: ${errorData.message}`);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erorr',
+                    text: `Gagal Mengupdate Data: ${errorData.message}`,
+                    timer: 2000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erorr',
+                text: `Gagal Mengupdate Data: ${error.message}`,
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+            });
+        }
+    }
+
     const handleDelete = () => {
         if (deleteId) {
             deleteDepartment(deleteId);
             setDeleteId(null);
         }
     }
+
+    const handleUpdate = () => {
+        if (editId) {
+            updateDepartment(editId);
+            setEditId(null);
+        }
+    }
+
+    const handleInputChange = (e, field) => {
+        const { value } = e.target;
+        setDepartments(prevDepartments =>
+            prevDepartments.map(department =>
+                department._id === editId ? { ...department, [field]: value } : department
+            )
+        );
+    };
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -198,7 +284,7 @@ function DepartmentPage() {
                                                                 <DropdownMenuItem>
                                                                     <Link className='w-full' href={`/departements/${slug}/${department._id}`}>Open</Link>
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => setEditId(department._id)}>Edit</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem className='text-red-500' onClick={() => setDeleteId(department._id)}>Delete</DropdownMenuItem>
                                                             </DropdownMenuContent>
@@ -223,6 +309,164 @@ function DepartmentPage() {
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!editId} onOpenChange={(open) => !open && setEditId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Konfirmasi Mengedit {departments.find(department => department._id === editId)?.name}</AlertDialogTitle>
+                        <AlertDialogDescription className="grid gap-3 ">
+                            {/* {departments.find(department => department._id === editId)?.type === 'Universitas' ? (
+                                <>
+                                    <div className='space-y-2'>
+                                        <Label htmlFor="name">Nama Website</Label>
+                                        <Input
+                                            id="name"
+                                            name="name"
+                                            value={departments.find(department => department._id === editId)?.name || ''}
+                                            onChange={(e) => handleInputChange(e, 'name')}
+                                            required
+                                            placeholder="Masukkan nama website"
+                                        />
+                                    </div>
+                                    <div className='space-y-2'>
+                                        <Label htmlFor="link">Link Website</Label>
+                                        <Input
+                                            id="link"
+                                            name="link"
+                                            value={departments.find(department => department._id === editId)?.link || ''}
+                                            onChange={(e) => handleInputChange(e, 'link')}
+                                            required
+                                            placeholder="Masukkan link website"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className='space-y-2'>
+                                    <Label htmlFor="name">Nama Fakultas</Label>
+                                    <Input
+                                        id="name"
+                                        name="name"
+                                        value={departments.find(department => department._id === editId)?.name || ''}
+                                        onChange={(e) => handleInputChange(e, 'name')}
+                                        required
+                                        placeholder="Masukkan nama fakultas"
+                                        className="w-full"
+                                    />
+                                </div>
+                            )} */}
+
+                            {(() => {
+                                const department = departments.find(dept => dept._id === editId);
+                                if (!department) return null;
+
+                                switch (department.type) {
+                                    case 'Universitas':
+                                        return (
+                                            <>
+                                                <div className='space-y-2'>
+                                                    <Label htmlFor="name">Nama Website</Label>
+                                                    <Input
+                                                        id="name"
+                                                        name="name"
+                                                        value={department.name || ''}
+                                                        onChange={(e) => handleInputChange(e, 'name')}
+                                                        required
+                                                        placeholder="Masukkan nama website"
+                                                    />
+                                                </div>
+                                                <div className='space-y-2'>
+                                                    <Label htmlFor="link">Link Website</Label>
+                                                    <Input
+                                                        id="link"
+                                                        name="link"
+                                                        value={department.link || ''}
+                                                        onChange={(e) => handleInputChange(e, 'link')}
+                                                        required
+                                                        placeholder="Masukkan link website"
+                                                    />
+                                                </div>
+                                            </>
+                                        );
+                                    case 'Fakultas':
+                                        return (
+                                            <>
+                                                <div className='space-y-2'>
+                                                    <Label htmlFor="name">Nama Website</Label>
+                                                    <Input
+                                                        id="name"
+                                                        name="name"
+                                                        value={department.name || ''}
+                                                        onChange={(e) => handleInputChange(e, 'name')}
+                                                        required
+                                                        placeholder="Masukkan nama website"
+                                                    />
+                                                </div>
+                                                <div className='space-y-2'>
+                                                    <Label htmlFor="link">Link Website</Label>
+                                                    <Input
+                                                        id="link"
+                                                        name="link"
+                                                        value={department.link || ''}
+                                                        onChange={(e) => handleInputChange(e, 'link')}
+                                                        required
+                                                        placeholder="Masukkan link website"
+                                                    />
+                                                </div>
+                                            </>
+                                        );
+                                    case 'Prodi':
+                                        return (
+                                            <>
+                                                <div className='space-y-2'>
+                                                    <Label htmlFor="name">Nama Website</Label>
+                                                    <Input
+                                                        id="name"
+                                                        name="name"
+                                                        value={department.name || ''}
+                                                        onChange={(e) => handleInputChange(e, 'name')}
+                                                        required
+                                                        placeholder="Masukkan nama website"
+                                                    />
+                                                </div>
+                                                <div className='space-y-2'>
+                                                    <Label htmlFor="link">Link Website</Label>
+                                                    <Input
+                                                        id="link"
+                                                        name="link"
+                                                        value={department.link || ''}
+                                                        onChange={(e) => handleInputChange(e, 'link')}
+                                                        required
+                                                        placeholder="Masukkan link website"
+                                                    />
+                                                </div>
+                                            </>
+                                        );
+                                    default:
+                                        return (
+                                            <div className='space-y-2'>
+                                                <Label htmlFor="name">Nama Fakultas</Label>
+                                                <Input
+                                                    id="name"
+                                                    name="name"
+                                                    value={departments.find(department => department._id === editId)?.name || ''}
+                                                    onChange={(e) => handleInputChange(e, 'name')}
+                                                    required
+                                                    placeholder="Masukkan nama fakultas"
+                                                    className="w-full"
+                                                />
+                                            </div>
+                                        );  // Jika tipe tidak dikenali
+                                }
+                            })()}
+
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="justify-center">
+                        <AlertDialogCancel onClick={() => setEditId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUpdate}>Update</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
