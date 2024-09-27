@@ -3,6 +3,36 @@ import Web from "@/models/webSchema";
 import Prodi from "@/models/prodiSchema";
 import mongoose from 'mongoose';
 
+export async function GET(request) {
+    await connectMongoDB();
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id");
+        
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return new Response(JSON.stringify({ success: false, error: "Invalid ID format" }), {
+                status: 400,
+            });
+        }
+
+        const facultiesWeb = await Web.findOne({ fakultas_id: new mongoose.Types.ObjectId(id), type: 'Fakultas' });
+        
+        if (!facultiesWeb) {
+            return new Response(JSON.stringify({ success: false, error: "Faculty Web not found" }), {
+                status: 404,
+            });
+        }
+
+        return new Response(JSON.stringify({ success: true, data: facultiesWeb }), {
+            status: 200,
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500,
+        });
+    }
+}
 
 export async function POST(req, res) {
     await connectMongoDB();
@@ -26,3 +56,4 @@ export async function POST(req, res) {
         });
     }
 }
+

@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import Sidebar from '@/components/General/Sidebar'
 import Header from "@/components/General/Header"
 import { Label } from "@/components/ui/label"
@@ -17,15 +18,54 @@ function Page() {
     const [actionType, setActionType] = useState('');
     const [selectedWeb, setSelectedWeb] = useState('');
     const [groupName, setGroupName] = useState('');
+    const [universityWebList, setUniversityWebList] = useState([]);
+    const { status } = useSession();
+    const [formWeb, setFormWebData] = useState({
+        name: '',
+        website_id: '',
+    });
+    const [facultyData, setFacultyData] = useState([]);
+    const [programData, setProgramData] = useState([]);
+    const [programWebList, setProgramWebList] = useState([]);
+    const [facultyWebList, setFacultyWebList] = useState([]);
+
+    console.log(facultyData);
+    
+    useEffect(() => {
+        if (status === "authenticated") {
+            fetchUniversityWebList();
+        }
+    }, [status]);
+
+    console.log("hello", formWeb);
+
+    const fetchUniversityWebList = async () => {
+        try {
+            const response = await fetch('/api/website/university');
+
+            if (response.ok) {
+                const data = await response.json();
+                setUniversityWebList(data.data);
+                console.log(data.data);
+            } else {
+                console.error('Failed to fetch faculties');
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+
 
     const handleSelectChange = (value) => {
-        // Reset all states when changing the level
         setSelectedOption(value);
         setSelectedFaculty('');
         setActionType('');
         setSelectedProdi('');
         setSelectedWeb('');
         setGroupName('');
+        fetchFaculty()
+
     };
 
     const handleFacultyChange = (value) => {
@@ -43,6 +83,12 @@ function Page() {
         setSelectedProdi('');
         setSelectedWeb('');
         setGroupName('');
+        setFormWebData((prevData) => ({
+            ...prevData,
+            website_id: selectedFaculty
+        }));
+        fetchProdi(selectedFaculty)
+        fetchFakultasWeb(selectedFaculty)
     };
 
     const handleProdiChange = (value) => {
@@ -50,18 +96,155 @@ function Page() {
         setSelectedProdi(value);
         setSelectedWeb('');
         setGroupName('');
+        setFormWebData((prevData) => ({
+            ...prevData,
+            website_id: value
+        }));
+        fetchProdiWeb(value)
+
     };
 
     const handleWebChange = (value) => {
-        // Only reset groupName when changing web
         setSelectedWeb(value);
         setGroupName('');
+        setFormWebData((prevData) => ({
+            ...prevData,
+            website_id: value
+        }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        Swal.fire("Success", "Group saran berhasil dibuat", "success");
+
+        console.log('Form data yang dikirim:', {
+            name: formWeb.name,
+            website_id: selectedWeb
+        });
+
+        let response;
+
+        if (selectedOption) {
+            response = await fetch('/api/group-saran', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: formWeb.name,
+                    website_id: selectedWeb
+                })
+            });
+        }
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Post created:', data);
+            setFormWebData({
+                name: '',
+                website_id: '',
+            });
+            Swal.fire({
+                icon: 'success',
+                title: 'Sukses',
+                text: 'Sukses Menambahkan Group Saran',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+            });
+        } else {
+            const errorData = await response.json();
+            console.log(`Error: ${errorData.message}`);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: `Gagal Mengupdate Data: ${errorData.message}`,
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+            });
+        }
     };
+
+    const fetchFaculty = async () => {
+        try {
+            const response = await fetch("/api/departments/fakultas")
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log(data);
+
+                setFacultyData(data.data)
+            } else {
+                console.error('Failed to fetch faculties');
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    const fetchProdi = async (facultyID) => {
+        try {
+            const response = await fetch(`/api/departments/fakultas/prodi/${facultyID}`);
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log("prodi", data);
+
+                setProgramData(data.data);
+            } else {
+                console.error('Failed to fetch study programs');
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    const fetchProdiWeb = async (prodiID) => {
+        try {
+            const response = await fetch(`/api/website/prodi/${prodiID}`);
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log("prodi", data);
+
+                setProgramWebList(data.data);
+            } else {
+                console.error('Failed to fetch study programs');
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    const fetchFakultasWeb = async (fakultasID) => {
+        try {
+            const response = await fetch(`/api/website/fakultas?id=${fakultasID}`);
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log("prodi", data);
+
+                if (data && data.data) {
+                    setFacultyWebList([data.data]); // Masukkan objek ke dalam array
+                } else {
+                    setFacultyWebList([]); // Jika tidak ada data, set array kosong
+                }
+            } else {
+                console.error('Failed to fetch study programs');
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormWebData({ ...formWeb, [name]: value });
+    }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -91,15 +274,17 @@ function Page() {
                                             <SelectValue placeholder="Pilih Web Universitas" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="WebUniv1">Web Universitas 1</SelectItem>
-                                            <SelectItem value="WebUniv2">Web Universitas 2</SelectItem>
+                                            {universityWebList.map((univWeb) => (
+                                                <SelectItem key={univWeb._id} value={univWeb._id}>
+                                                    {univWeb.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
-
                                     {selectedWeb && (
                                         <div className="grid gap-3">
-                                            <Label htmlFor="group-name">Nama Group Saran</Label>
-                                            <Input id="group-name" placeholder="Masukkan nama grup" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                                            <Label htmlFor="name">Nama Group Saran</Label>
+                                            <Input id="name" name="name" placeholder="Masukkan nama grup" value={formWeb.name} onChange={handleInputChange} />
                                         </div>
                                     )}
                                 </div>
@@ -113,15 +298,18 @@ function Page() {
                                             <SelectValue placeholder="Pilih Fakultas" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Teknik">Fakultas Teknik</SelectItem>
-                                            <SelectItem value="Pertanian">Fakultas Pertanian</SelectItem>
-                                            {/* Add more fakultas here */}
+                                            {facultyData.map((faculty) => (
+                                                <SelectItem key={faculty._id} value={faculty._id}>
+                                                    {faculty.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
+
                                 </div>
                             )}
 
-                            {selectedFaculty === 'Teknik' && (
+                            {selectedFaculty && (
                                 <div className="grid gap-3">
                                     <Label htmlFor="action-type">Pilih Tindakan</Label>
                                     <Select onValueChange={handleActionTypeChange}>
@@ -130,11 +318,13 @@ function Page() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Prodi">Pilih Prodi</SelectItem>
-                                            <SelectItem value="Masukkan">Masukkan Web Baru</SelectItem>
+                                            <SelectItem value="Masukkan">Buat Grup Saran Baru</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             )}
+
+
 
                             {actionType === 'Prodi' && (
                                 <div className="grid gap-3">
@@ -144,9 +334,11 @@ function Page() {
                                             <SelectValue placeholder="Pilih Prodi" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Informatika">Teknik Informatika</SelectItem>
-                                            <SelectItem value="Mesin">Teknik Mesin</SelectItem>
-                                            {/* Add more prodi here */}
+                                            {programData.map((prodi) => (
+                                                <SelectItem key={prodi._id} value={prodi._id}>
+                                                    {prodi.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
 
@@ -158,15 +350,18 @@ function Page() {
                                                     <SelectValue placeholder="Pilih Web" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="Web1">Web Fakultas Teknik</SelectItem>
-                                                    <SelectItem value="Web2">Web Teknik Informatika</SelectItem>
+                                                    {programWebList.map((prodiWeb) => (
+                                                        <SelectItem key={prodiWeb._id} value={prodiWeb._id}>
+                                                            {prodiWeb.name}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
 
                                             {selectedWeb && (
                                                 <div className="grid gap-3">
-                                                    <Label htmlFor="group-name">Nama Group Saran</Label>
-                                                    <Input id="group-name" placeholder="Masukkan nama grup" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                                                    <Label htmlFor="name">Nama Group Saran</Label>
+                                                    <Input id="name" name="name" placeholder="Masukkan nama grup" value={formWeb.name} onChange={handleInputChange} />
                                                 </div>
                                             )}
                                         </div>
@@ -182,23 +377,27 @@ function Page() {
                                             <SelectValue placeholder="Pilih Web" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Web1">Web Fakultas Teknik</SelectItem>
-                                            <SelectItem value="Web2">Web Teknik Informatika</SelectItem>
+                                            {facultyWebList.map((facultyWeb) => (
+                                                <SelectItem key={facultyWeb._id} value={facultyWeb._id}>
+                                                    {facultyWeb.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
 
                                     {selectedWeb && (
                                         <div className="grid gap-3">
-                                            <Label htmlFor="group-name">Nama Group Saran</Label>
-                                            <Input id="group-name" placeholder="Masukkan nama grup" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                                            <Label htmlFor="name">Nama Group Saran</Label>
+                                            <Input id="name" name="name" placeholder="Masukkan nama grup" value={formWeb.name} onChange={handleInputChange} />
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {groupName && (
-                                <Button type="submit">Buat Group Saran</Button>
-                            )}
+                            <div className="flex pt-4 flex-col mx-auto gap-4">
+                                <Button className="w-96">Submit</Button>
+                                <Button variant="outline" className="w-96">Cancel</Button>
+                            </div>
                         </div>
                     </form>
                 </main>
