@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import Joi from 'joi';
 import validator from 'validator';
 
-// Handle GET request
 export async function GET(req, res) {
   await connectMongoDB();
 

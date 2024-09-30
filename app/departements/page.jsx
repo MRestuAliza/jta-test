@@ -124,6 +124,8 @@ function DepartmentPage() {
                     timer: 1000,
                     timerProgressBar: true,
                     showConfirmButton: false,
+                }).then(() => {
+                    window.location.reload();
                 });
                 // alert('Department updated successfully');
             } else {

@@ -16,9 +16,10 @@ export async function GET(request) {
             });
         }
 
-        const facultiesWeb = await Web.findOne({ fakultas_id: new mongoose.Types.ObjectId(id), type: 'Fakultas' });
+        // Gunakan find() untuk mengembalikan array
+        const facultiesWeb = await Web.find({ fakultas_id: new mongoose.Types.ObjectId(id), type: 'Fakultas' });
         
-        if (!facultiesWeb) {
+        if (!facultiesWeb.length) {
             return new Response(JSON.stringify({ success: false, error: "Faculty Web not found" }), {
                 status: 404,
             });
@@ -33,6 +34,7 @@ export async function GET(request) {
         });
     }
 }
+
 
 export async function POST(req, res) {
     await connectMongoDB();

@@ -1,409 +1,159 @@
-"use client"
+"use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from 'react';
+import Link from "next/link";
+import Sidebar from '@/components/General/Sidebar';
+import Header from "@/components/General/Header";
+import { Search, MoreVertical } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSession } from "next-auth/react";
-import Sidebar from '@/components/General/Sidebar'
-import Header from "@/components/General/Header"
-import { Label } from "@/components/ui/label"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import withAuth from "@/libs/withAuth";
-import Swal from 'sweetalert2';
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "@/components/ui/tabs";
 
-function Page() {
-    const [selectedOption, setSelectedOption] = useState('');
-    const [selectedFaculty, setSelectedFaculty] = useState('');
-    const [selectedProdi, setSelectedProdi] = useState('');
-    const [actionType, setActionType] = useState('');
-    const [selectedWeb, setSelectedWeb] = useState('');
-    const [groupName, setGroupName] = useState('');
-    const [universityWebList, setUniversityWebList] = useState([]);
+function AdvicePage() {
     const { status } = useSession();
-    const [formWeb, setFormWebData] = useState({
-        name: '',
-        website_id: '',
-    });
-    const [facultyData, setFacultyData] = useState([]);
-    const [programData, setProgramData] = useState([]);
-    const [programWebList, setProgramWebList] = useState([]);
-    const [facultyWebList, setFacultyWebList] = useState([]);
+    const [advices, setAdvices] = useState([]);
 
-    console.log(facultyData);
-    
     useEffect(() => {
         if (status === "authenticated") {
-            fetchUniversityWebList();
+            fetchAdvice();
         }
     }, [status]);
 
-    console.log("hello", formWeb);
-
-    const fetchUniversityWebList = async () => {
+    const fetchAdvice = async () => {
         try {
-            const response = await fetch('/api/website/university');
-
-            if (response.ok) {
-                const data = await response.json();
-                setUniversityWebList(data.data);
-                console.log(data.data);
-            } else {
-                console.error('Failed to fetch faculties');
+            const response = await fetch(`/api/group-saran`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-
-
-    const handleSelectChange = (value) => {
-        setSelectedOption(value);
-        setSelectedFaculty('');
-        setActionType('');
-        setSelectedProdi('');
-        setSelectedWeb('');
-        setGroupName('');
-        fetchFaculty()
-
-    };
-
-    const handleFacultyChange = (value) => {
-        // Reset states related to action type and below when changing faculty
-        setSelectedFaculty(value);
-        setActionType('');
-        setSelectedProdi('');
-        setSelectedWeb('');
-        setGroupName('');
-    };
-
-    const handleActionTypeChange = (value) => {
-        // Reset states related to prodi and web when changing action type
-        setActionType(value);
-        setSelectedProdi('');
-        setSelectedWeb('');
-        setGroupName('');
-        setFormWebData((prevData) => ({
-            ...prevData,
-            website_id: selectedFaculty
-        }));
-        fetchProdi(selectedFaculty)
-        fetchFakultasWeb(selectedFaculty)
-    };
-
-    const handleProdiChange = (value) => {
-        // Reset web and groupName when changing prodi
-        setSelectedProdi(value);
-        setSelectedWeb('');
-        setGroupName('');
-        setFormWebData((prevData) => ({
-            ...prevData,
-            website_id: value
-        }));
-        fetchProdiWeb(value)
-
-    };
-
-    const handleWebChange = (value) => {
-        setSelectedWeb(value);
-        setGroupName('');
-        setFormWebData((prevData) => ({
-            ...prevData,
-            website_id: value
-        }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        console.log('Form data yang dikirim:', {
-            name: formWeb.name,
-            website_id: selectedWeb
-        });
-
-        let response;
-
-        if (selectedOption) {
-            response = await fetch('/api/group-saran', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: formWeb.name,
-                    website_id: selectedWeb
-                })
-            });
-        }
-
-        if (response.ok) {
             const data = await response.json();
-            console.log('Post created:', data);
-            setFormWebData({
-                name: '',
-                website_id: '',
-            });
-            Swal.fire({
-                icon: 'success',
-                title: 'Sukses',
-                text: 'Sukses Menambahkan Group Saran',
-                timer: 2000,
-                timerProgressBar: true,
-                showConfirmButton: false,
-            });
-        } else {
-            const errorData = await response.json();
-            console.log(`Error: ${errorData.message}`);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: `Gagal Mengupdate Data: ${errorData.message}`,
-                timer: 2000,
-                timerProgressBar: true,
-                showConfirmButton: false,
-            });
-        }
-    };
-
-    const fetchFaculty = async () => {
-        try {
-            const response = await fetch("/api/departments/fakultas")
-
-            if (response.ok) {
-                const data = await response.json()
-                console.log(data);
-
-                setFacultyData(data.data)
-            } else {
-                console.error('Failed to fetch faculties');
-            }
-
+            setAdvices(data.data);
         } catch (error) {
-            console.error(error);
+            console.error('Failed to fetch advice:', error);
         }
-    }
-
-    const fetchProdi = async (facultyID) => {
-        try {
-            const response = await fetch(`/api/departments/fakultas/prodi/${facultyID}`);
-
-            if (response.ok) {
-                const data = await response.json()
-                console.log("prodi", data);
-
-                setProgramData(data.data);
-            } else {
-                console.error('Failed to fetch study programs');
-            }
-
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    const fetchProdiWeb = async (prodiID) => {
-        try {
-            const response = await fetch(`/api/website/prodi/${prodiID}`);
-
-            if (response.ok) {
-                const data = await response.json()
-                console.log("prodi", data);
-
-                setProgramWebList(data.data);
-            } else {
-                console.error('Failed to fetch study programs');
-            }
-
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    const fetchFakultasWeb = async (fakultasID) => {
-        try {
-            const response = await fetch(`/api/website/fakultas?id=${fakultasID}`);
-
-            if (response.ok) {
-                const data = await response.json()
-                console.log("prodi", data);
-
-                if (data && data.data) {
-                    setFacultyWebList([data.data]); // Masukkan objek ke dalam array
-                } else {
-                    setFacultyWebList([]); // Jika tidak ada data, set array kosong
-                }
-            } else {
-                console.error('Failed to fetch study programs');
-            }
-
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormWebData({ ...formWeb, [name]: value });
     }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Sidebar />
             <div className='flex flex-col sm:gap-4 sm:py-4 sm:pl-14'>
-                <Header BreadcrumbLinkTitle={"Add Departments"} />
+                <Header BreadcrumbLinkTitle={"Departments"} />
                 <main className='p-4 space-y-4'>
-                    <form className="grid gap-6" onSubmit={handleSubmit}>
-                        <div className="grid gap-3">
-                            <Label htmlFor="level">Pilih Tingkat</Label>
-                            <Select onValueChange={handleSelectChange}>
-                                <SelectTrigger id="level" aria-label="Select level">
-                                    <SelectValue placeholder="Select level" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Universitas">Universitas</SelectItem>
-                                    <SelectItem value="Fakultas">Fakultas</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {/* University Web Selection */}
-                            {selectedOption === 'Universitas' && (
-                                <div className="grid gap-3">
-                                    <Label htmlFor="web">Pilih Web Universitas</Label>
-                                    <Select onValueChange={handleWebChange}>
-                                        <SelectTrigger id="web" aria-label="Pilih Web">
-                                            <SelectValue placeholder="Pilih Web Universitas" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {universityWebList.map((univWeb) => (
-                                                <SelectItem key={univWeb._id} value={univWeb._id}>
-                                                    {univWeb.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {selectedWeb && (
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="name">Nama Group Saran</Label>
-                                            <Input id="name" name="name" placeholder="Masukkan nama grup" value={formWeb.name} onChange={handleInputChange} />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {selectedOption === 'Fakultas' && (
-                                <div className="grid gap-3">
-                                    <Label htmlFor="faculty">Pilih Fakultas</Label>
-                                    <Select onValueChange={handleFacultyChange}>
-                                        <SelectTrigger id="faculty" aria-label="Select Faculty">
-                                            <SelectValue placeholder="Pilih Fakultas" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {facultyData.map((faculty) => (
-                                                <SelectItem key={faculty._id} value={faculty._id}>
-                                                    {faculty.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-
-                                </div>
-                            )}
-
-                            {selectedFaculty && (
-                                <div className="grid gap-3">
-                                    <Label htmlFor="action-type">Pilih Tindakan</Label>
-                                    <Select onValueChange={handleActionTypeChange}>
-                                        <SelectTrigger id="action-type" aria-label="Pilih tindakan">
-                                            <SelectValue placeholder="Pilih tindakan" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Prodi">Pilih Prodi</SelectItem>
-                                            <SelectItem value="Masukkan">Buat Grup Saran Baru</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-
-
-                            {actionType === 'Prodi' && (
-                                <div className="grid gap-3">
-                                    <Label htmlFor="prodi">Pilih Prodi</Label>
-                                    <Select onValueChange={handleProdiChange}>
-                                        <SelectTrigger id="prodi" aria-label="Pilih Prodi">
-                                            <SelectValue placeholder="Pilih Prodi" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {programData.map((prodi) => (
-                                                <SelectItem key={prodi._id} value={prodi._id}>
-                                                    {prodi.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-
-                                    {selectedProdi && (
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="web">Pilih Web untuk Group Saran</Label>
-                                            <Select onValueChange={handleWebChange}>
-                                                <SelectTrigger id="web" aria-label="Pilih Web">
-                                                    <SelectValue placeholder="Pilih Web" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {programWebList.map((prodiWeb) => (
-                                                        <SelectItem key={prodiWeb._id} value={prodiWeb._id}>
-                                                            {prodiWeb.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-
-                                            {selectedWeb && (
-                                                <div className="grid gap-3">
-                                                    <Label htmlFor="name">Nama Group Saran</Label>
-                                                    <Input id="name" name="name" placeholder="Masukkan nama grup" value={formWeb.name} onChange={handleInputChange} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {actionType === 'Masukkan' && (
-                                <div className="grid gap-3">
-                                    <Label htmlFor="web">Pilih Web yang Ada</Label>
-                                    <Select onValueChange={handleWebChange}>
-                                        <SelectTrigger id="web" aria-label="Pilih Web">
-                                            <SelectValue placeholder="Pilih Web" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {facultyWebList.map((facultyWeb) => (
-                                                <SelectItem key={facultyWeb._id} value={facultyWeb._id}>
-                                                    {facultyWeb.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-
-                                    {selectedWeb && (
-                                        <div className="grid gap-3">
-                                            <Label htmlFor="name">Nama Group Saran</Label>
-                                            <Input id="name" name="name" placeholder="Masukkan nama grup" value={formWeb.name} onChange={handleInputChange} />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex pt-4 flex-col mx-auto gap-4">
-                                <Button className="w-96">Submit</Button>
-                                <Button variant="outline" className="w-96">Cancel</Button>
-                            </div>
+                    <Tabs defaultValue="all">
+                        <div>
+                            <TabsList className="mb-2">
+                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="active">Active</TabsTrigger>
+                                <TabsTrigger value="draft">Draft</TabsTrigger>
+                                <TabsTrigger value="archived" className="hidden sm:flex">
+                                    Archived
+                                </TabsTrigger>
+                            </TabsList>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center">
+                                    <div className="grid gap-2">
+                                        <CardTitle className="">List Departemen</CardTitle>
+                                    </div>
+                                    <div className="relative ml-auto flex-1 md:grow-0">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="search"
+                                            placeholder="Search..."
+                                            className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
+                                        />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Name</TableHead>
+                                                    <TableHead className="hidden sm:table-cell">
+                                                        Link Saran
+                                                    </TableHead>
+                                                    <TableHead className="hidden sm:table-cell">
+                                                        Level
+                                                    </TableHead>
+                                                    <TableHead className="hidden md:table-cell">
+                                                        Date
+                                                    </TableHead>
+                                                    <TableHead className="text-right"></TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {advices.map((advice) => (
+                                                    <TableRow key={advice._id}>
+                                                        <TableCell>
+                                                            <div className="font-medium">{advice.name}</div>
+                                                        </TableCell>
+                                                        <TableCell className="hidden sm:table-cell">
+                                                            {advice.link}
+                                                        </TableCell>
+                                                        <TableCell className="hidden sm:table-cell">
+                                                            <Badge className="text-xs" variant="secondary">
+                                                                {advice.type}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="hidden md:table-cell">
+                                                            {new Date(advice.updated_at).toLocaleDateString()}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button size="icon" variant="outline" className="h-8 w-8">
+                                                                        <MoreVertical className="h-3.5 w-3.5" />
+                                                                        <span className="sr-only">More</span>
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem>
+                                                                        <Link className='w-full' href={`/departements/${advice._id}`}>Open</Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
-                    </form>
+                    </Tabs>
                 </main>
             </div>
         </div>
-    )
+    );
 }
 
-export default withAuth(Page);
+export default AdvicePage;

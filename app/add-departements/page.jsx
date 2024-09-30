@@ -214,9 +214,11 @@ function Page() {
           icon: 'success',
           title: 'Sukses',
           text: 'Sukses Menambahkan Data',
-          timer: 2000,
+          timer: 1000,
           timerProgressBar: true,
           showConfirmButton: false,
+        }).then(() => {
+          window.location.reload();
         });
       } else {
         console.error('Failed to create post');
