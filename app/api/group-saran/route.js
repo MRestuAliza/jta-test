@@ -4,7 +4,10 @@ import { customAlphabet } from 'nanoid';
 import Fakultas from "@/models/fakultasSchema"; // Impor model Fakultas
 import Universitas from "@/models/universitasSchema"; // Impor model Universitas
 import Prodi from "@/models/prodiSchema";
+import mongoose from "mongoose";
 import { NextResponse } from 'next/server'
+import Joi from 'joi';
+import validator from 'validator';
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 21);
 
@@ -98,5 +101,79 @@ export async function DELETE(request) {
     
   } catch (error) {
 
+  }
+}
+
+export async function PATCH(req) {
+  await connectMongoDB();
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: "Invalid ID format",
+      data: null
+    }), {
+      status: 400,
+    });
+  }
+
+  try {
+    const { name } = await req.json();
+
+    const schema = Joi.object({
+      name: Joi.string().min(3).max(100).required(),
+    });
+
+    const { error } = schema.validate({ name });
+    if (error) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: error.message,
+        data: null
+      }), {
+        status: 400,
+      });
+    }
+
+    const sanitizedData = {
+      name: validator.escape(name)
+    };
+
+    const updateAdviceGroup = await GroupSaran.findOneAndUpdate(
+      { _id: new mongoose.Types.ObjectId(id) },
+      sanitizedData,
+      { new: true }
+    );
+
+    if (!updateAdviceGroup) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: "Advice group not found",
+        data: null
+      }), {
+        status: 404,
+      });
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Advice group name updated successfully",
+      data: updateAdviceGroup
+    }), {
+      status: 200,
+    });
+  } catch (error) {
+    console.error(error.message);
+    return new Response(JSON.stringify({
+      success: false,
+      message: "Internal server error",
+      data: null,
+      error: error.message
+    }), {
+      status: 500,
+    });
   }
 }

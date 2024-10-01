@@ -8,6 +8,8 @@ import { Search, MoreVertical } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from '@/libs/dateUtils';
+import { Label } from "@/components/ui/label"
 import {
     Table,
     TableBody,
@@ -45,12 +47,13 @@ function AdvicePage() {
     const [filter, setFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [deleteId, setDeleteId] = useState(null);
+    const [editId, setEditId] = useState(null);
 
-        useEffect(() => {
-            if (status === "authenticated") {
-                fetchAdvice();
-            }
-        }, [status]);
+    useEffect(() => {
+        if (status === "authenticated") {
+            fetchAdvice();
+        }
+    }, [status]);
 
     const fetchAdvice = async () => {
         try {
@@ -107,6 +110,56 @@ function AdvicePage() {
         }
     }
 
+    const updateAdviceGroup = async (id) => {
+        try {
+            const advice = advices.find(adv => adv._id === id);
+            const response = await fetch(`/api/group-saran?id=${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: advice.name
+                }),
+            });
+
+            if (response.ok) {
+                const updatedDepartment = await response.json();
+                setAdvices(advices.map(adv =>
+                    adv._id === id ? updatedDepartment.data : adv
+                ));
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Sukses',
+                    text: 'Sukses Mengupdate Data',
+                    timer: 1000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
+            } else {
+                const errorData = await response.json();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erorr',
+                    text: 'Gagal Mengupdate Data',
+                    timer: 1000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
+            }
+        } catch (error) {
+            console.error('Error updated department:', error);
+            alert('An error occurred while updated the department');
+        }
+    }
+
+    const handleUpdate = () => {
+        if (editId) {
+            updateAdviceGroup(editId);
+            setEditId(null);
+        }
+    }
+
     const filteredAdvices = advices.filter(advice => {
         const matchesType = filter === "all" || advice.type === filter
         const searchQueryLower = searchQuery.toLowerCase();
@@ -119,6 +172,16 @@ function AdvicePage() {
 
         return matchesType && matchesSearchQuery;
     });
+
+    const handleInputChange = (e, field) => {
+        const { value } = e.target;
+        setAdvices(prevAdvices =>
+            prevAdvices.map(advice =>
+                advice._id === editId ? { ...advice, [field]: value } : advice
+            )
+        );
+    };
+    
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -191,7 +254,7 @@ function AdvicePage() {
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell className="hidden md:table-cell">
-                                                                {new Date(advice.updated_at).toLocaleDateString()}
+                                                                {formatDate(advice.updated_at)}
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <DropdownMenu>
@@ -205,9 +268,7 @@ function AdvicePage() {
                                                                         <DropdownMenuItem>
                                                                             <Link className='w-full' href={`/departements/${advice._id}`}>Open</Link>
                                                                         </DropdownMenuItem>
-                                                                        <DropdownMenuItem>
-                                                                            <Link className='w-full' href={`/departements/${advice._id}`}>Edit</Link>
-                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => setEditId(advice._id)}>Edit</DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
                                                                         <DropdownMenuItem className='text-red-500' onClick={() => setDeleteId(advice._id)}>Delete</DropdownMenuItem>
                                                                     </DropdownMenuContent>
@@ -241,6 +302,32 @@ function AdvicePage() {
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-red-500">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!editId} onOpenChange={(open) => !open && setEditId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Konfirmasi Mengedit {advices.find(adv => adv._id === editId)?.name}</AlertDialogTitle>
+                        <AlertDialogDescription className="grid gap-3 ">
+                            <div className='space-y-2'>
+                                <Label htmlFor="name">Nama group saran</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    value={advices.find(advc => advc._id === editId)?.name || ''}
+                                    onChange={(e) => handleInputChange(e, 'name')}
+                                    required
+                                    placeholder="Masukkan nama saran group"
+                                    className="w-full"
+                                />
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="justify-center">
+                        <AlertDialogCancel onClick={() => setEditId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUpdate}>Update</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

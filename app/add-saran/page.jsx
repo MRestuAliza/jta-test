@@ -94,6 +94,7 @@ function Page() {
         setGroupName('');
         setFormWebData((prevData) => ({
             ...prevData,
+            type: value,
             website_id: selectedFaculty
         }));
         fetchProdi(selectedFaculty)
@@ -106,7 +107,7 @@ function Page() {
         setGroupName('');
         setFormWebData((prevData) => ({
             ...prevData,
-            type: value,
+            prodi_id: value,
             website_id: value
         }));
         fetchProdiWeb(value)
