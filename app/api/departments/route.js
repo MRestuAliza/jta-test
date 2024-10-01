@@ -1,5 +1,6 @@
 import { connectMongoDB } from "@/libs/mongodb";
 import Universitas from "@/models/universitasSchema";
+import { NextResponse } from 'next/server'
 
 export async function DELETE(request) {
     try {

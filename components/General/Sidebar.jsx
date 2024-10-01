@@ -65,7 +65,7 @@ const Sidebar = () => {
                     <TooltipTrigger asChild>
                         <Link
                             href="/saran"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/notif" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/saran" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
                         >
                             <Mail className="h-5 w-5" />
                             <span className="sr-only">Saran</span>
@@ -77,7 +77,7 @@ const Sidebar = () => {
                     <TooltipTrigger asChild>
                         <Link
                             href="/add-saran"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/saran" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/add-saran" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
                         >
                             <MailPlus className="h-5 w-5" />
                             <span className="sr-only">Tambah group saran</span>
@@ -87,17 +87,6 @@ const Sidebar = () => {
                 </Tooltip>
                 
             </nav>
-            {/* <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Link href="#" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8">
-                        <Settings className="h-5 w-5" />
-                        <span className="sr-only">Settings</span>
-                    </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Settings</TooltipContent>
-            </Tooltip>
-        </nav> */}
         </aside>
     )
 };
