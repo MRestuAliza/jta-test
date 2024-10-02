@@ -1,5 +1,38 @@
 import { connectMongoDB } from "@/libs/mongodb";
 import Saran from "@/models/saranSchema";
+import mongoose from "mongoose";
+
+
+export async function GET(req) {
+    await connectMongoDB();
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return new Response(JSON.stringify({
+          success: false,
+          message: "Invalid ID format",
+          data: null
+        }), {
+          status: 400,
+        });
+    }
+
+    try {
+        // Cari saran berdasarkan groupSaranId, gunakan find() atau findOne()
+        const saranList = await Saran.find({ groupSaranId: new mongoose.Types.ObjectId(id) });
+
+        return new Response(JSON.stringify({ success: true, data: saranList }), {
+            status: 200,
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500,
+        });
+    }
+}
+
 
 export async function POST(req, res) {
     await connectMongoDB();
@@ -27,6 +60,6 @@ export async function POST(req, res) {
         // return res.status(500).json({ success: false, error: error.message });
         return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
             status: 500,
-          });
+        });
     }
 }

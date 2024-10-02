@@ -266,7 +266,7 @@ function AdvicePage() {
                                                                     </DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
                                                                         <DropdownMenuItem>
-                                                                            <Link className='w-full' href={`/departements/${advice._id}`}>Open</Link>
+                                                                            <Link className='w-full' href={`/saran/${advice._id}`}>Open</Link>
                                                                         </DropdownMenuItem>
                                                                         <DropdownMenuItem onClick={() => setEditId(advice._id)}>Edit</DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
