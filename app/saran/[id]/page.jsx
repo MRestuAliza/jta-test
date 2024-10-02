@@ -29,7 +29,8 @@ function AdviceGroupPage() {
     const { status } = useSession();
     const [adviceGroup, setAdviceGroup] = useState(null);
     const [advice, setAdvice] = useState([]);
-    const { id } = useParams(); // Ambil ID dari URL menggunakan useParams
+    const { id } = useParams();
+    const [saranCount, setSaranCount] = useState(0);
 
     useEffect(() => {
         if (status === "authenticated" && id) { // Tunggu hingga status auth dan id tersedia
@@ -45,7 +46,8 @@ function AdviceGroupPage() {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            setAdviceGroup(data.data); // Simpan data advice group
+            setAdviceGroup(data.data);
+            setSaranCount(data.count);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
         }
@@ -104,22 +106,22 @@ function AdviceGroupPage() {
                                 <CardHeader className="pb-3">
                                     <CardTitle>{adviceGroup.name}</CardTitle>
                                     <CardDescription className="max-w-lg text-balance leading-relaxed">
-                                        <p>2 saran</p>
+                                        <p>Website ini memiliki {saranCount} saran</p>
 
-                                        <div className="grid gap-3">
+                                        <div className="grid gap-3 pt-5">
                                             <Label htmlFor="link">Public link</Label>
                                             <div className="flex items-center gap-2">
                                                 <Input
                                                     id="link"
                                                     type="text"
                                                     className="w-full"
-                                                    defaultValue={`http://localhost:3000/b/${adviceGroup.link}`}
+                                                    defaultValue={`http://localhost:3000/saran/board/${adviceGroup.link}`}
                                                     readOnly
                                                 />
                                                 <Button
                                                     variant="outline"
                                                     size="icon"
-                                                    onClick={() => handleCopyLink(`http://localhost:3000/b/${adviceGroup.link}`)}
+                                                    onClick={() => handleCopyLink(`http://localhost:3000/saran/board/${adviceGroup.link}`)}
                                                 >
                                                     <Copy className="h-5 w-5" />
                                                     <span className="sr-only">Copy link</span>
@@ -127,7 +129,7 @@ function AdviceGroupPage() {
                                                 <Button
                                                     variant="outline"
                                                     size="icon"
-                                                    onClick={() => window.open(`https://insigh.to/b/${adviceGroup._id}`, "_blank")}
+                                                    onClick={() => window.open(`http://localhost:3000/saran/board/${adviceGroup.link}`, "_blank")}
                                                 >
                                                     <ChevronRight className="h-5 w-5" />
                                                     <span className="sr-only">Open link</span>
