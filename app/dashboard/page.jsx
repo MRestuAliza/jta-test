@@ -35,9 +35,8 @@ import { useSession } from "next-auth/react";
 
 export function Dashboard() {
     const { status } = useSession();
-    const [totalAdvice, setTotalAdvice] = useState(0);
-    const [newSaran, setNewSaran] = useState(0);
     const [currentDisplayed, setCurrentDisplayed] = useState(0);
+    const [animatedNewSaran, setAnimatedNewSaran] = useState(0);
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -55,11 +54,10 @@ export function Dashboard() {
             const data = await response.json();
             
             const totalSaran = data.total;
-            const totalAdviceLastMount = data.totalLastMonth;
-            setTotalAdvice(totalSaran);
-            setNewSaran(totalAdviceLastMount);
-            animateCounter(0, totalSaran, setCurrentDisplayed);
-            animateCounter(0, totalAdviceLastMount, setCurrentDisplayed);
+            const totalAdviceLastMonth = data.totalLastMonth;
+
+            animateCounter(currentDisplayed, totalSaran, setCurrentDisplayed);
+            animateCounter(0, totalAdviceLastMonth, setAnimatedNewSaran);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
         }
@@ -96,7 +94,7 @@ export function Dashboard() {
                             <CardContent>
                                 <div className="text-2xl font-bold">{currentDisplayed}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    +{currentDisplayed} Dari Bulan Lalu
+                                    +{animatedNewSaran} Dari Bulan Lalu
                                 </p>
                             </CardContent>
                         </Card>

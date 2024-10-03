@@ -160,7 +160,7 @@ function AdviceGroupPage() {
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="outline" className="text-muted-foreground">
-                                                        <span role="img" aria-label="flag">⭐</span> New <ChevronRight className="inline h-4 w-4" />
+                                                        <span role="img" aria-label="flag">⭐</span> {item.status} <ChevronRight className="inline h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent>

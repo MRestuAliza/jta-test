@@ -10,11 +10,11 @@ export async function GET(req) {
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return new Response(JSON.stringify({
-          success: false,
-          message: "Invalid ID format",
-          data: null
+            success: false,
+            message: "Invalid ID format",
+            data: null
         }), {
-          status: 400,
+            status: 400,
         });
     }
 
@@ -32,31 +32,89 @@ export async function GET(req) {
     }
 }
 
-
 export async function POST(req, res) {
     await connectMongoDB();
 
     try {
         // Ambil data dari body request
-        const { title, description, groupSaranId } = await req.json(); // Menggunakan await req.json() untuk mendapatkan data body
+        const { title, description, groupSaranId } = await req.json(); 
 
         if (!title || !description || !groupSaranId) {
-            return res.status(400).json({ message: "Title, description, and groupSaranId are required" });
+            return new Response(JSON.stringify({ message: "Title, description, and groupSaranId are required" }), {
+                status: 400,
+            });
         }
 
-        // Buat saran baru
         const newSaran = await Saran.create({
             title,
             description,
-            groupSaranId,
+            status: 'new',
+            groupSaranId: new mongoose.Types.ObjectId(groupSaranId),
         });
 
-        return new Response(JSON.stringify({ success: true, data: newSaran }), {
+        const saranWithStatus = newSaran.toObject({ getters: true, versionKey: false }); // Mengambil status
+        console.log(saranWithStatus); // Tambahkan ini untuk debugging
+        return new Response(JSON.stringify({ success: true, data: saranWithStatus }), {
+            status: 200,
+        });
+
+    } catch (error) {
+        return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
+            status: 500,
+        });
+    }
+}
+
+
+export async function PATCH(req) {
+    await connectMongoDB();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return new Response(JSON.stringify({
+            success: false,
+            message: "Invalid ID format",
+            data: null
+        }), {
+            status: 400,
+        });
+    }
+
+    try {
+
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return new Response(JSON.stringify({ success: false, message: "Invalid ID format" }), {
+                status: 400,
+            });
+        }
+
+        // Validasi status yang diizinkan
+        const allowedStatuses = ['new', 'work in progress', 'done', 'cancelled'];
+        if (!allowedStatuses.includes(status)) {
+            return new Response(JSON.stringify({ success: false, message: "Invalid status value" }), {
+                status: 400,
+            });
+        }
+
+        // Cari dan perbarui status saran berdasarkan ID
+        const updatedSaran = await Saran.findByIdAndUpdate(
+            id,
+            { status: status, updated_at: Date.now() }, // Mengubah status dan waktu update
+            { new: true } // Mengembalikan data yang baru setelah update
+        );
+
+        if (!updatedSaran) {
+            return new Response(JSON.stringify({ success: false, message: "Saran not found" }), {
+                status: 404,
+            });
+        }
+
+        return new Response(JSON.stringify({ success: true, data: updatedSaran }), {
             status: 200,
         });
     } catch (error) {
-        // Tangani kesalahan dan kembalikan respons kesalahan
-        // return res.status(500).json({ success: false, error: error.message });
         return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
             status: 500,
         });

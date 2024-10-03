@@ -14,6 +14,11 @@ const SaranSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    status: {
+        type: String,
+        enum: ['new', 'in_progress', 'completed', 'cancelled'], // Enum untuk status yang diizinkan
+        default: 'new', // Default status
+    },
     has_comments: {
         type: Boolean,
         default: false,
