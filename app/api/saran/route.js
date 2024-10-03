@@ -2,7 +2,6 @@ import { connectMongoDB } from "@/libs/mongodb";
 import Saran from "@/models/saranSchema";
 import mongoose from "mongoose";
 
-
 export async function GET(req) {
     await connectMongoDB();
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react";
 import Link from "next/link"
 import {
     Mail,
@@ -30,15 +31,62 @@ import Chart from "../../components/Dashboard/Chart"
 import Sidebar from "@/components/General/Sidebar"
 import Header from "@/components/General/Header"
 import withAuth from "@/libs/withAuth"
+import { useSession } from "next-auth/react";
 
 export function Dashboard() {
+    const { status } = useSession();
+    const [totalAdvice, setTotalAdvice] = useState(0);
+    const [newSaran, setNewSaran] = useState(0);
+    const [currentDisplayed, setCurrentDisplayed] = useState(0);
+
+    useEffect(() => {
+        if (status === "authenticated") {
+            fetchSaranCount()
+        }
+    }, [status]);
+
+
+    const fetchSaranCount = async () => {
+        try {
+            const response = await fetch("/api/saran/count");
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            
+            const totalSaran = data.total;
+            const totalAdviceLastMount = data.totalLastMonth;
+            setTotalAdvice(totalSaran);
+            setNewSaran(totalAdviceLastMount);
+            animateCounter(0, totalSaran, setCurrentDisplayed);
+            animateCounter(0, totalAdviceLastMount, setCurrentDisplayed);
+        } catch (error) {
+            console.error('Failed to fetch advice:', error);
+        }
+    };
+
+    const animateCounter = (start, end, setValue) => {
+        const increment = Math.ceil((end - start) / 50);
+        
+        let current = start;
+
+        const interval = setInterval(() => {
+            current += increment;
+            if (current >= end) {
+                current = end;
+                clearInterval(interval);
+            }
+            setValue(current);
+        }, 50);
+    };
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Sidebar />
             <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-                <Header BreadcrumbLinkTitle={"Dashboard"}/>
+                <Header BreadcrumbLinkTitle={"Dashboard"} />
                 <main className="p-4 space-y-4">
-                    
+
                     <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
                         <Card x-chunk="dashboard-01-chunk-1">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -46,9 +94,9 @@ export function Dashboard() {
                                 <Mail className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">+2350</div>
+                                <div className="text-2xl font-bold">{currentDisplayed}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    +18 from last month
+                                    +{currentDisplayed} Dari Bulan Lalu
                                 </p>
                             </CardContent>
                         </Card>
