@@ -1,67 +1,128 @@
 import { connectMongoDB } from "@/libs/mongodb";
+import GroupSaran from '@/models/groupSaranSchema';
 import Saran from "@/models/saranSchema";
 import mongoose from "mongoose";
 
 export async function GET(req) {
     await connectMongoDB();
-
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return new Response(JSON.stringify({
-            success: false,
-            message: "Invalid ID format",
-            data: null
-        }), {
-            status: 400,
-        });
-    }
+    const url = new URL(req.url); // Ambil URL
+    const link = url.searchParams.get('link');
+    const id = url.searchParams.get('id');
 
     try {
-        // Cari saran berdasarkan groupSaranId, gunakan find() atau findOne()
-        const saranList = await Saran.find({ groupSaranId: new mongoose.Types.ObjectId(id) });
+        let groupSaran;
+
+        if (link) {
+            groupSaran = await GroupSaran.findOne({ link: link });
+        } else if (id && mongoose.Types.ObjectId.isValid(id)) {
+            groupSaran = await GroupSaran.findById(id);
+        } else {
+            return new Response(JSON.stringify({
+                success: false,
+                message: "Parameter 'link' atau 'id' tidak valid",
+                data: null
+            }), {
+                status: 400,
+            });
+        }
+
+        if (!groupSaran) {
+            return new Response(JSON.stringify({
+                success: false,
+                message: "Group Saran tidak ditemukan",
+                data: null
+            }), {
+                status: 404,
+            });
+        }
+
+        // Ambil semua saran berdasarkan groupSaranId
+        const saranList = await Saran.find({ groupSaranId: groupSaran._id });
 
         return new Response(JSON.stringify({ success: true, data: saranList }), {
             status: 200,
         });
     } catch (error) {
+        console.error('Error:', error);
         return new Response(JSON.stringify({ success: false, error: error.message }), {
             status: 500,
         });
     }
 }
 
+// export async function POST(req, res) {
+//     await connectMongoDB();
+
+//     try {
+//         // Ambil data dari body request
+//         const { title, description, groupSaranId } = await req.json(); 
+
+//         if (!title || !description || !groupSaranId) {
+//             return new Response(JSON.stringify({ message: "Title, description, and groupSaranId are required" }), {
+//                 status: 400,
+//             });
+//         }
+
+//         const newSaran = await Saran.create({
+//             title,
+//             description,
+//             status: 'new',
+//             groupSaranId: new mongoose.Types.ObjectId(groupSaranId),
+//         });
+
+//         const saranWithStatus = newSaran.toObject({ getters: true, versionKey: false }); // Mengambil status
+//         return new Response(JSON.stringify({ success: true, data: saranWithStatus }), {
+//             status: 200,
+//         });
+
+//     } catch (error) {
+//         return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
+//             status: 500,
+//         });
+//     }
+// }
 export async function POST(req, res) {
     await connectMongoDB();
 
-    try {
-        // Ambil data dari body request
-        const { title, description, groupSaranId } = await req.json(); 
+    const url = new URL(req.url); // Ambil URL
+    const link = url.searchParams.get('link');
 
-        if (!title || !description || !groupSaranId) {
-            return new Response(JSON.stringify({ message: "Title, description, and groupSaranId are required" }), {
-                status: 400,
+    const { title, description } = await req.json();
+
+    if (!link) {
+        return new Response(JSON.stringify({ message: "Parameter 'link' tidak ditemukan" }), {
+            status: 400,
+        });
+    }
+
+    try {
+        // Cari group saran berdasarkan link
+        const groupSaran = await GroupSaran.findOne({ link: link });
+        if (!groupSaran) {
+            return new Response(JSON.stringify({ message: "Group Saran tidak ditemukan" }), {
+                status: 404,
             });
         }
 
-        const newSaran = await Saran.create({
-            title,
-            description,
-            status: 'new',
-            groupSaranId: new mongoose.Types.ObjectId(groupSaranId),
+        // Ambil ID group saran
+        const groupSaranId = groupSaran._id;
+
+        // Buat saran baru
+        const newSaran = new Saran({
+            groupSaranId: groupSaranId,
+            title: title,
+            description: description,
+            saran: 'new',
         });
 
-        const saranWithStatus = newSaran.toObject({ getters: true, versionKey: false }); // Mengambil status
-        console.log(saranWithStatus); // Tambahkan ini untuk debugging
-        return new Response(JSON.stringify({ success: true, data: saranWithStatus }), {
+        await newSaran.save(); // Simpan saran baru
+
+        return new Response(JSON.stringify({ success: true, data: newSaran }), {
             status: 200,
         });
-
     } catch (error) {
-        return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
-            status: 500,
-        });
+        console.error('Error saat mengirim saran:', error);
+        return res.status(500).json({ message: 'Terjadi kesalahan' });
     }
 }
 

@@ -33,7 +33,7 @@ function AdviceGroupPage() {
     const [saranCount, setSaranCount] = useState(0);
 
     useEffect(() => {
-        if (status === "authenticated" && id) { // Tunggu hingga status auth dan id tersedia
+        if (status === "authenticated" && id) {
             fetchAdviceGroup(id);
             fetchAdvice(id);
         }
