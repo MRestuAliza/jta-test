@@ -4,24 +4,23 @@ import { Button } from "@/components/ui/button"
 
 const Hero = () => {
     return (
-        <section className="flex items-center justify-center h-screen">
-            <div className="text-center">
+        <section className="flex items-center h-screen mx-32">
+            <div className="">
                 <h1 className="text-4xl font-bold text-gray-800">
-                    Sampaikan Saran Anda dengan Mudah
+                    Sampaikan Saran Anda untuk Meningkatkan Website Fakultas Teknik
                 </h1>
                 <p className="mt-4 text-lg text-gray-600">
-                    Platform terbaik untuk memberikan saran dan feedback kepada institusi.
+                    Platform khusus untuk mahasiswa Fakultas Teknik dalam memberikan saran dan masukan demi peningkatan kualitas layanan digital kami.
                 </p>
                 <div className="mt-6">
-                    <Link href="/login" className="ml-auto flex-1 sm:flex-initial px-10">
+                    <Link href="/login" className="">
                         <Button type="submit" className="relative">
                             Login
                         </Button>
-
                     </Link>
                 </div>
             </div>
-        </section>
+        </section >
     );
 };
 
