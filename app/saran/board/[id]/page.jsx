@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
-import { ChevronRight,ChevronDown, ChevronUp, MessageSquare, ArrowRight, Trash2, Copy } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSession } from "next-auth/react";
 import {
@@ -15,18 +16,12 @@ import {
     CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import withAuth from '@/libs/withAuth';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"
-import { useParams } from 'next/navigation'
 import Swal from 'sweetalert2';
 import Link from 'next/link';
+import NotFound from '@/app/not-found';
 
 function AdviceGroupPage() {
     const { id: groupSaranId } = useParams();
@@ -36,12 +31,13 @@ function AdviceGroupPage() {
         description: ''
     });
     const [advice, setAdvice] = useState([]);
+    const [notFound, setNotFound] = useState(false); // State to handle not found
 
     useEffect(() => {
         if (status === "authenticated") {
             fetchAdvice();
         }
-    }, [status]);
+    }, [status, groupSaranId]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -52,14 +48,19 @@ function AdviceGroupPage() {
         try {
             const response = await fetch(`/api/saran?link=${groupSaranId}`);
             if (!response.ok) {
-                throw new Error('Gagal mengambil data');
-
+                throw new Error('Data tidak ditemukan');
             }
             const data = await response.json();
-            setAdvice(data.data)
-        } catch (error) {
-            console.error(error)
 
+            if (!data || !data.data || data.data.length === 0) {
+                setNotFound(true);
+            } else {
+                setAdvice(data.data);
+                setNotFound(false);
+            }
+        } catch (error) {
+            console.error(error);
+            setNotFound(true); // Set notFound state to true on error
         }
     }
 
@@ -114,6 +115,12 @@ function AdviceGroupPage() {
     const hasUpvoted = false;
     const hasDownvoted = false;
 
+    if (notFound) {
+        return (
+            <><NotFound /></>
+        );
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Sidebar />
@@ -163,17 +170,15 @@ function AdviceGroupPage() {
                     </div>
                     <div>
                         <div className="grid auto-rows-max items-start gap-4 md:gap-8 max-h-[900px] overflow-y-scroll">
-                            {/* Repetisi untuk layout saran */}
                             {advice.map((item) => (
                                 <Link href="www.google.com">
                                     <Card className="sm:col-span-2" key={item._id}>
                                         <CardHeader className="pb-3">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <CardTitle className="font-bold text-lg">{item.title}</CardTitle> {/* Judul */}
-                                                    <CardDescription className="text-muted-foreground">{item.description}</CardDescription> {/* Deskripsi */}
+                                                    <CardTitle className="font-bold text-lg">{item.title}</CardTitle>
+                                                    <CardDescription className="text-muted-foreground">{item.description}</CardDescription>
                                                 </div>
-                                                {/* Bagian Upvote dan Downvote */}
                                                 <div className="flex items-center text-black rounded-lg p-2">
                                                     <Button variant="ghost" onClick={""} className="p-1">
                                                         <ChevronUp className={`h-6 w-6 ${hasUpvoted ? 'text-blue-600' : ''}`} />
@@ -186,7 +191,6 @@ function AdviceGroupPage() {
                                             </div>
                                         </CardHeader>
                                         <CardFooter className="flex justify-between items-center">
-                                            {/* Bagian Komentar */}
                                             <div className="flex items-center gap-2">
                                                 <MessageSquare className="h-4 w-4" />
                                                 <span>12</span>

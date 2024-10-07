@@ -1,7 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Home, List, ListPlus, Package, Users2, MailPlus, Mail, Settings } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useRouter, usePathname } from 'next/navigation';
+import {  usePathname } from 'next/navigation';
 
 const Sidebar = () => {
     const router = usePathname();
