@@ -22,16 +22,19 @@ import { Textarea } from "@/components/ui/textarea"
 import Swal from 'sweetalert2';
 import Link from 'next/link';
 import NotFound from '@/app/not-found';
+import { set } from 'mongoose';
 
 function AdviceGroupPage() {
     const { id: groupSaranId } = useParams();
-    const { status } = useSession();
+    const { status, data: session } = useSession();
     const [formWeb, setFormWeb] = useState({
         title: '',
         description: ''
     });
     const [advice, setAdvice] = useState([]);
-    const [notFound, setNotFound] = useState(false); // State to handle not found
+    const [notFound, setNotFound] = useState(false);
+    const [voteStatus, setVoteStatus] = useState({});
+    const [userVotes, setUserVotes] = useState({});
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -46,16 +49,18 @@ function AdviceGroupPage() {
 
     const fetchAdvice = async () => {
         try {
-            const response = await fetch(`/api/saran?link=${groupSaranId}`);
+            const response = await fetch(`/api/saran/vote?link=${groupSaranId}&userId=${session.user.id}`);
             if (!response.ok) {
                 throw new Error('Data tidak ditemukan');
             }
             const data = await response.json();
-
+    
             if (!data || !data.data || data.data.length === 0) {
                 setNotFound(true);
             } else {
-                setAdvice(data.data);
+                setAdvice(data.data.saranList);
+                setVoteStatus(data.data.voteStatus); // Status vote saran secara keseluruhan
+                setUserVotes(data.data.userVotes); // Status vote user untuk tiap saran
                 setNotFound(false);
             }
         } catch (error) {
@@ -63,7 +68,7 @@ function AdviceGroupPage() {
             setNotFound(true); // Set notFound state to true on error
         }
     }
-
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log('Form data yang dikirim:', {
@@ -112,8 +117,42 @@ function AdviceGroupPage() {
             console.error(error)
         }
     };
-    const hasUpvoted = false;
-    const hasDownvoted = false;
+
+    const handleVote = async (saranId, voteType) => {
+        try {
+            if (!session || !session.user || !session.user.id) {
+                throw new Error('Anda harus login terlebih dahulu');
+            }
+    
+            const userId = session.user.id;
+    
+            const response = await fetch(`/api/saran/vote?saranId=${saranId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, voteType })
+            });
+    
+            if (response.ok) {
+                const updatedSaran = await response.json();
+                
+                // Pastikan 'data' dan 'voteScore' ada
+                if (updatedSaran && updatedSaran.data && typeof updatedSaran.data.voteScore !== 'undefined') {
+                    setAdvice(prev => prev.map(item => item._id === saranId ? { ...item, voteScore: updatedSaran.data.voteScore } : item));
+                    setUserVotes(prev => ({
+                        ...prev,
+                        [saranId]: voteType
+                    }));
+                } else {
+                    console.error("Vote data not found or invalid response");
+                }
+            } else {
+                console.error('Failed to update vote');
+            }
+        } catch (error) {
+            console.error('Error while voting:', error);
+        }
+    };
+
 
     if (notFound) {
         return (
@@ -179,31 +218,25 @@ function AdviceGroupPage() {
                                                 <CardDescription className="text-muted-foreground">{item.description}</CardDescription>
                                             </div>
                                             <div className="flex items-center text-black rounded-lg p-2">
-                                                <Button variant="ghost" className="p-1" disabled>
-                                                    <ChevronUp className={`h-6 w-6 ${hasUpvoted ? 'text-blue-600' : ''}`} />
+                                                <Button variant="ghost" className="p-1" onClick={() => handleVote(item._id, 'upvote')}>
+                                                    <ChevronUp className={`h-6 w-6 ${userVotes[item._id] === 'upvote' ? ' bg-orange-500 rounded-sm text-white' : ''}`} />
                                                 </Button>
-                                                <span>12</span>
-                                                <Button variant="ghost" className="p-1" disabled>
-                                                    <ChevronDown className={`h-6 w-6 ${hasDownvoted ? 'text-red-600' : ''}`} />
+                                                <span>{item.voteScore}</span>
+                                                <Button variant="ghost" className="p-1" onClick={() => handleVote(item._id, 'downvote')}>
+                                                    <ChevronDown className={`h-6 w-6 ${userVotes[item._id] === 'downvote' ? 'bg-red-500 rounded-sm text-white' : ''}`} />
                                                 </Button>
                                             </div>
+
                                         </div>
                                     </CardHeader>
                                     <CardFooter className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <MessageSquare className="h-4 w-4" />
-                                            <span>12</span>
+                                            <span>3</span>
                                         </div>
-                                        {/* <Button
-                                            variant="outline"
-                                            className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "done" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}
-                                            disabled
-                                        >
-                                            {item.status}
-                                        </Button> */}
                                         <div className="flex text-primary items-center gap-2">
-                                            <span className="text-red-500">
-                                            {item.status}
+                                            <span className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "done" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}>
+                                                {item.status}
                                             </span>
 
                                             <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${adviceGroup.link}/d/s}`, "_blank")}>

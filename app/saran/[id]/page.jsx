@@ -294,7 +294,7 @@ function AdviceGroupPage() {
                                         <div className="flex items-center gap-2">
                                             <Button variant="ghost" size="sm" className="flex items-center gap-1">
                                                 <ChevronUp className="h-4 w-4" />
-                                                <span>0</span>
+                                                <span>{item.voteScore}</span>
                                             </Button>
                                             <Button variant="ghost" size="sm" className="flex items-center gap-1">
                                                 <MessageSquare className="h-4 w-4" />

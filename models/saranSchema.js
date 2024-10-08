@@ -23,6 +23,10 @@ const SaranSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    voteScore: {
+        type: Number,
+        default: 0,  // Menyimpan score total upvote-downvote
+    },
     created_at: {
         type: Date,
         default: Date.now,

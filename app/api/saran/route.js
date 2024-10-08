@@ -50,37 +50,6 @@ export async function GET(req) {
     }
 }
 
-// export async function POST(req, res) {
-//     await connectMongoDB();
-
-//     try {
-//         // Ambil data dari body request
-//         const { title, description, groupSaranId } = await req.json(); 
-
-//         if (!title || !description || !groupSaranId) {
-//             return new Response(JSON.stringify({ message: "Title, description, and groupSaranId are required" }), {
-//                 status: 400,
-//             });
-//         }
-
-//         const newSaran = await Saran.create({
-//             title,
-//             description,
-//             status: 'new',
-//             groupSaranId: new mongoose.Types.ObjectId(groupSaranId),
-//         });
-
-//         const saranWithStatus = newSaran.toObject({ getters: true, versionKey: false }); // Mengambil status
-//         return new Response(JSON.stringify({ success: true, data: saranWithStatus }), {
-//             status: 200,
-//         });
-
-//     } catch (error) {
-//         return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
-//             status: 500,
-//         });
-//     }
-// }
 export async function POST(req, res) {
     await connectMongoDB();
 
@@ -201,3 +170,4 @@ export async function PATCH(req) {
         );
     }
 }
+
