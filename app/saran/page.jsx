@@ -202,7 +202,7 @@ function AdvicePage() {
                             <Card>
                                 <CardHeader className="flex flex-row items-center">
                                     <div className="grid gap-2">
-                                        <CardTitle className="">List Departemen</CardTitle>
+                                        <CardTitle className="">List Saran</CardTitle>
                                     </div>
                                     <div className="relative ml-auto flex-1 md:grow-0">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

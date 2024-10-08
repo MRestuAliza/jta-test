@@ -6,37 +6,57 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 export function Navbar() {
     return (
-        <div className="flex w-full flex-col absolute">
-            <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
-                <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
-                    <Link
-                        href="#"
-                        className="flex items-center gap-2 text-lg font-semibold md:text-base"
-                    >
-                        <Package2 className="h-6 w-6" />
-                        <span className="sr-only">Acme Inc</span>
-                    </Link>
-                </nav>
-                <Sheet>
-                    <SheetTrigger asChild>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="shrink-0 md:hidden"
-                        >
-                            <Menu className="h-5 w-5" />
-                            <span className="sr-only">Toggle navigation menu</span>
-                        </Button>
-                    </SheetTrigger>
-                </Sheet>
-                <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-                    <Link href="/login" className="ml-auto flex-1 sm:flex-initial">
-                        <Button type="submit" className="relative">
-                            Login
-                        </Button>
-                    </Link>
+        // <div className="flex w-full flex-col absolute">
+        //     <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+        //         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+        //             <Link
+        //                 href="#"
+        //                 className="flex items-center gap-2 text-lg font-semibold md:text-base"
+        //             >
+        //                 <Package2 className="h-6 w-6" />
+        //                 <span className="sr-only">Acme Inc</span>
+        //             </Link>
+        //         </nav>
+        //         <Sheet>
+        //             <SheetTrigger asChild>
+        //                 <Button
+        //                     variant="outline"
+        //                     size="icon"
+        //                     className="shrink-0 md:hidden"
+        //                 >
+        //                     <Menu className="h-5 w-5" />
+        //                     <span className="sr-only">Toggle navigation menu</span>
+        //                 </Button>
+        //             </SheetTrigger>
+        //         </Sheet>
+        //         <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+        //             <Link href="/login" className="ml-auto flex-1 sm:flex-initial">
+        //                 <Button type="submit" className="relative">
+        //                     Login
+        //                 </Button>
+        //             </Link>
+        //         </div>
+        //     </header>
+        // </div>
+        <div className="w-full container mx-auto p-6">
+            <div className="w-full flex items-center justify-between">
+                <a
+                    className="flex items-center no-underline hover:no-underline font-bold text-xl lg:text-3xl"
+                    href="#"
+                >
+                    Sistem Informasi Saran
+                </a>
+
+                <div className="flex justify-end content-center">
+                    <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+                        <Link href="/login" className="ml-auto flex-1 sm:flex-initial">
+                            <Button type="submit" className="relative">
+                                Login
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
-            </header>
+            </div>
         </div>
     )
 }

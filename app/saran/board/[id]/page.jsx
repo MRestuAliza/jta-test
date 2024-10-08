@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
-import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
+import { ChevronDown, ArrowRight, Trash2, ChevronUp, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSession } from "next-auth/react";
 import {
@@ -171,33 +171,48 @@ function AdviceGroupPage() {
                     <div>
                         <div className="grid auto-rows-max items-start gap-4 md:gap-8 max-h-[900px] overflow-y-scroll">
                             {advice.map((item) => (
-                                <Link href="www.google.com">
-                                    <Card className="sm:col-span-2" key={item._id}>
-                                        <CardHeader className="pb-3">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <CardTitle className="font-bold text-lg">{item.title}</CardTitle>
-                                                    <CardDescription className="text-muted-foreground">{item.description}</CardDescription>
-                                                </div>
-                                                <div className="flex items-center text-black rounded-lg p-2">
-                                                    <Button variant="ghost" onClick={""} className="p-1">
-                                                        <ChevronUp className={`h-6 w-6 ${hasUpvoted ? 'text-blue-600' : ''}`} />
-                                                    </Button>
-                                                    <span>12</span>
-                                                    <Button variant="ghost" onClick={""} className="p-1">
-                                                        <ChevronDown className={`h-6 w-6 ${hasDownvoted ? 'text-red-600' : ''}`} />
-                                                    </Button>
-                                                </div>
+                                <Card className="sm:col-span-2" key={item._id}>
+                                    <CardHeader className="pb-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <CardTitle className="font-bold text-lg">{item.title}</CardTitle>
+                                                <CardDescription className="text-muted-foreground">{item.description}</CardDescription>
                                             </div>
-                                        </CardHeader>
-                                        <CardFooter className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2">
-                                                <MessageSquare className="h-4 w-4" />
+                                            <div className="flex items-center text-black rounded-lg p-2">
+                                                <Button variant="ghost" className="p-1" disabled>
+                                                    <ChevronUp className={`h-6 w-6 ${hasUpvoted ? 'text-blue-600' : ''}`} />
+                                                </Button>
                                                 <span>12</span>
+                                                <Button variant="ghost" className="p-1" disabled>
+                                                    <ChevronDown className={`h-6 w-6 ${hasDownvoted ? 'text-red-600' : ''}`} />
+                                                </Button>
                                             </div>
-                                        </CardFooter>
-                                    </Card>
-                                </Link>
+                                        </div>
+                                    </CardHeader>
+                                    <CardFooter className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <MessageSquare className="h-4 w-4" />
+                                            <span>12</span>
+                                        </div>
+                                        {/* <Button
+                                            variant="outline"
+                                            className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "done" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}
+                                            disabled
+                                        >
+                                            {item.status}
+                                        </Button> */}
+                                        <div className="flex text-primary items-center gap-2">
+                                            <span className="text-red-500">
+                                            {item.status}
+                                            </span>
+
+                                            <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${adviceGroup.link}/d/s}`, "_blank")}>
+                                                View <ArrowRight className="ml-1 h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </CardFooter>
+                                </Card>
+
                             ))}
                         </div>
                     </div>

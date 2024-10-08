@@ -132,31 +132,36 @@ export async function PATCH(req) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
+    // Ambil body dari request untuk mendapatkan status
+    const body = await req.json();
+    const { status } = body; // Mengambil status dari body request
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return new Response(JSON.stringify({
-            success: false,
-            message: "Invalid ID format",
-            data: null
-        }), {
-            status: 400,
-        });
+        return new Response(
+            JSON.stringify({
+                success: false,
+                message: "Invalid ID format",
+                data: null,
+            }),
+            {
+                status: 400,
+            }
+        );
     }
 
     try {
-
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return new Response(JSON.stringify({ success: false, message: "Invalid ID format" }), {
-                status: 400,
-            });
-        }
-
         // Validasi status yang diizinkan
-        const allowedStatuses = ['new', 'work in progress', 'done', 'cancelled'];
+        const allowedStatuses = ["new", "work in progress", "done", "cancelled"];
         if (!allowedStatuses.includes(status)) {
-            return new Response(JSON.stringify({ success: false, message: "Invalid status value" }), {
-                status: 400,
-            });
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    message: "Invalid status value",
+                }),
+                {
+                    status: 400,
+                }
+            );
         }
 
         // Cari dan perbarui status saran berdasarkan ID
@@ -167,17 +172,32 @@ export async function PATCH(req) {
         );
 
         if (!updatedSaran) {
-            return new Response(JSON.stringify({ success: false, message: "Saran not found" }), {
-                status: 404,
-            });
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    message: "Saran not found",
+                }),
+                {
+                    status: 404,
+                }
+            );
         }
 
-        return new Response(JSON.stringify({ success: true, data: updatedSaran }), {
-            status: 200,
-        });
+        return new Response(
+            JSON.stringify({ success: true, data: updatedSaran }),
+            {
+                status: 200,
+            }
+        );
     } catch (error) {
-        return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), {
-            status: 500,
-        });
+        return new Response(
+            JSON.stringify({
+                message: "Internal Server Error",
+                error: error.message,
+            }),
+            {
+                status: 500,
+            }
+        );
     }
 }
