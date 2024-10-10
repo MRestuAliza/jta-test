@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
-import { ChevronRight, ChevronUp,  MessageSquare, ArrowRight, Trash2, Copy } from "lucide-react";
+import { ChevronRight, ChevronUp, MessageSquare, ArrowRight, Trash2, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import Link from "next/link";
@@ -292,20 +292,28 @@ function AdviceGroupPage() {
                                     </CardHeader>
                                     <CardFooter className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <img
+                                                    src={item.created_by.profilePicture}
+                                                    alt={item.created_by.name}
+                                                    className="w-8 h-8 rounded-full"
+                                                />
+                                                <span>{item.created_by?.name}</span>
+                                            </div>
                                             <Button variant="ghost" size="sm" className="flex items-center gap-1">
                                                 <ChevronUp className="h-4 w-4" />
                                                 <span>{item.voteScore}</span>
                                             </Button>
                                             <Button variant="ghost" size="sm" className="flex items-center gap-1">
+
                                                 <MessageSquare className="h-4 w-4" />
                                                 <span>1</span>
                                             </Button>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${adviceGroup.link}/d/s}`, "_blank")}>
+                                            <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${adviceGroup.link}/d/${item._id}`, "_blank")}>
                                                 View <ArrowRight className="ml-1 h-4 w-4" />
                                             </Button>
-
                                             <Button variant="link" size="sm" className="text-red-500">
                                                 Delete <Trash2 className="ml-1 h-4 w-4" />
                                             </Button>

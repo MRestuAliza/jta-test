@@ -12,7 +12,7 @@ export async function GET(req) {
     const userId = url.searchParams.get('userId');  // Dapatkan userId dari query params
 
     try {
-        let groupSaran = await GroupSaran.findOne({ link: link });
+        let groupSaran = await GroupSaran.findOne({ link: link })
         if (!groupSaran) {
             return new Response(JSON.stringify({
                 success: false,
@@ -23,7 +23,7 @@ export async function GET(req) {
             });
         }
 
-        const saranList = await Saran.find({ groupSaranId: groupSaran._id });
+        const saranList = await Saran.find({ groupSaranId: groupSaran._id }).populate('created_by', 'name profilePicture');
 
         // Ambil semua vote yang diberikan oleh user terkait dengan saran dalam group ini
         const userVotes = await Vote.find({ userId: userId, saranId: { $in: saranList.map(saran => saran._id) } });

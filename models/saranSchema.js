@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const SaranSchema = new mongoose.Schema({
     groupSaranId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'GroupSaran', // Menghubungkan saran ke grup saran
+        ref: 'GroupSaran',
         required: true,
     },
     title: {
@@ -16,8 +16,12 @@ const SaranSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['new', 'in_progress', 'completed', 'cancelled'], // Enum untuk status yang diizinkan
-        default: 'new', // Default status
+        enum: ['new', 'in_progress', 'completed', 'cancelled'],
+        default: 'new',
+    },
+    link: {
+        type: String,
+        required: true,
     },
     has_comments: {
         type: Boolean,
@@ -26,6 +30,11 @@ const SaranSchema = new mongoose.Schema({
     voteScore: {
         type: Number,
         default: 0,  // Menyimpan score total upvote-downvote
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',  // Referensi ke skema User
+        required: true,
     },
     created_at: {
         type: Date,
