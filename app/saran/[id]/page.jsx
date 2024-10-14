@@ -6,7 +6,6 @@ import Header from "@/components/General/Header";
 import { ChevronRight, ChevronUp, MessageSquare, ArrowRight, Trash2, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import Link from "next/link";
 import {
     Card,
     CardDescription,
@@ -26,15 +25,20 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from 'next/navigation'; // Import useParams
 import Swal from 'sweetalert2';
+import NotFound from '@/app/not-found';
+import DeletePopup from '@/components/General/DeletePopup';
 
 function AdviceGroupPage() {
     const { status } = useSession();
     const router = useRouter();
     const [adviceGroup, setAdviceGroup] = useState(null);
-    const [advice, setAdvice] = useState([]);
     const { id } = useParams();
+    const [advice, setAdvice] = useState([]);
+    const [deleteId, setDeleteId] = useState(null);
     const [saranCount, setSaranCount] = useState(0);
     const [deleteGroupId, setDeleteGroupId] = useState(null);
+    const [notFound, setNotFound] = useState(false);
+    
 
     useEffect(() => {
         if (status === "authenticated" && id) {
@@ -47,6 +51,7 @@ function AdviceGroupPage() {
         try {
             const response = await fetch(`/api/group-saran/${id}`);
             if (!response.ok) {
+                setNotFound(true);
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
@@ -61,6 +66,7 @@ function AdviceGroupPage() {
         try {
             const response = await fetch(`/api/saran?id=${id}`);
             if (!response.ok) {
+                setNotFound(true);
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
@@ -70,25 +76,65 @@ function AdviceGroupPage() {
         }
     };
 
-    const deleteAdvice = async (id) => {
+    const deleteAdviceGroup = async (id) => {
         try {
             const response = await fetch(`/api/group-saran?id=${id}`, {
                 method: 'DELETE',
             });
 
             if (response.ok) {
-                setAdvices(advices.filter((advice) => advice._id !== id));
+                setAdviceGroup(null);
+                setAdvice([]); 
+            } else {
+                throw new Error('Network response was not ok');
+            }
+        } catch (error) {
+            console.error('Failed to delete advice group:', error);
+        }
+    }
+
+    const deleteAdvice = async (id) => {
+        try {
+            const response = await fetch(`/api/saran?id=${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setAdvice(prevSaran => prevSaran.filter(item => item._id !== id)); // Perbarui saran tanpa menghapus semuanya
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Sukses Menghapus Saran',
+                    text: 'Saran berhasil dihapus',
+                    timer: 1000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                });
             } else {
                 throw new Error('Network response was not ok');
             }
         } catch (error) {
             console.error('Failed to delete advice:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Gagal Menghapus Saran',
+                timer: 1000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+            });
         }
-    }
+    };
 
-    const handleDelete = () => {
+    const handleDeleteAdvice = () => {
+        if (deleteId) {
+            deleteAdvice(deleteId);
+            setDeleteId(null);
+        }
+    };
+
+    const handleDeleteGroup = () => {
         if (deleteGroupId) {
-            deleteAdvice(deleteGroupId);
+            deleteAdviceGroup(deleteGroupId);
             setDeleteGroupId(null);
             Swal.fire({
                 icon: 'success',
@@ -103,14 +149,40 @@ function AdviceGroupPage() {
         } else {
             Swal.fire({
                 icon: 'error',
-                title: 'Erorr',
+                title: 'Error',
                 text: 'Gagal Menghapus Data',
                 timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: false,
             });
         }
-    }
+    };
+
+    // const handleDelete = () => {
+    //     if (deleteGroupId) {
+    //         deleteAdviceGroup(deleteGroupId);
+    //         setDeleteGroupId(null);
+    //         Swal.fire({
+    //             icon: 'success',
+    //             title: 'Sukses',
+    //             text: 'Sukses Menghapus Data',
+    //             timer: 1000,
+    //             timerProgressBar: true,
+    //             showConfirmButton: false,
+    //         }).then(() => {
+    //             router.push('/saran');
+    //         });
+    //     } else {
+    //         Swal.fire({
+    //             icon: 'error',
+    //             title: 'Erorr',
+    //             text: 'Gagal Menghapus Data',
+    //             timer: 1000,
+    //             timerProgressBar: true,
+    //             showConfirmButton: false,
+    //         });
+    //     }
+    // }
 
     const handleCopyLink = (link) => {
         navigator.clipboard.writeText(link).then(() => {
@@ -154,8 +226,9 @@ function AdviceGroupPage() {
             setAdvice(advice.map(item => item._id === saranId ? { ...item, status: newStatus } : item)); // Update status di UI
             Swal.fire({
                 icon: 'success',
-                title: 'Status Updated!',
-                text: `The status has been updated to ${newStatus}`,
+                title: `Status updated to ${newStatus}`,
+                position: 'top-right',
+                toast: true,
                 timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: false,
@@ -172,6 +245,12 @@ function AdviceGroupPage() {
             });
         }
     };
+
+    if (notFound) {
+        return (
+            <><NotFound /></>
+        );
+    }
 
 
     if (!adviceGroup) {
@@ -314,7 +393,7 @@ function AdviceGroupPage() {
                                             <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${adviceGroup.link}/d/${item._id}`, "_blank")}>
                                                 View <ArrowRight className="ml-1 h-4 w-4" />
                                             </Button>
-                                            <Button variant="link" size="sm" className="text-red-500">
+                                            <Button variant="link" size="sm" className="text-red-500" onClick={() => setDeleteId(item._id)}>
                                                 Delete <Trash2 className="ml-1 h-4 w-4" />
                                             </Button>
                                         </div>
@@ -325,19 +404,29 @@ function AdviceGroupPage() {
                     </div>
                 </main>
             </div >
+            <DeletePopup
+                open={!!deleteId}
+                onOpenChange={(open) => !open && setDeleteId(null)}
+                title={`Konfirmasi Menghapus ${advice.find(item => item._id === deleteId)?.title}`}
+                description="Apakah Anda yakin ingin menghapus data ini? Semua komentar dan vote yang terkait juga akan dihapus."
+                onConfirm={handleDeleteAdvice}
+                onCancel={() => setDeleteId(null)}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                confirmClass="bg-red-500"
+            />
 
-            <AlertDialog open={!!deleteGroupId} onOpenChange={(open) => !open && setDeleteGroupId(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Konfirmasi Menghapus {adviceGroup?.name}</AlertDialogTitle>
-                        <AlertDialogDescription>Apakah Anda yakin ingin menghapus data ini? Semua saran yang terkait juga akan dihapus</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setDeleteGroupId(null)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-red-500">Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeletePopup
+                open={!!deleteGroupId}
+                onOpenChange={(open) => !open && setDeleteGroupId(null)}
+                title={`Konfirmasi Menghapus ${adviceGroup?.name}`}
+                description="Apakah Anda yakin ingin menghapus data ini? Semua saran yang terkait juga akan dihapus."
+                onConfirm={handleDeleteGroup}
+                onCancel={() => setDeleteGroupId(null)}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                confirmClass="bg-red-500"
+            />
         </div >
     );
 }

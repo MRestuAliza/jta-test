@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import withAuth from '@/libs/withAuth';
 import { useParams } from 'next/navigation';
 import { useSession } from "next-auth/react";
+import NotFound from '@/app/not-found';
 import { set } from 'mongoose';
 
 function DetailPage() {
@@ -24,6 +25,8 @@ function DetailPage() {
   // const toggleReplies = () => setShowReplies(!showReplies);
   const toggleReplyForm = () => setShowReplyForm(!showReplyForm);
   const { status, data: session } = useSession();
+  const [notFound, setNotFound] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -45,23 +48,29 @@ function DetailPage() {
   };
 
   const fetchDetail = async () => {
+    setIsLoading(true);  // Set loading state to true before fetching data
     try {
       const response = await fetch(`/api/saran/vote/d?saranId=${slug[0]}&userId=${session.user.id}`);
-      if (!response) {
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setNotFound(true);
+        }
         throw new Error("Failed to fetch detail");
       }
+
       const data = await response.json();
       setDetailAdvice(data.data.saran);
       setUserVotes({
-        [data.data.saran._id]: data.data.userVote 
+        [data.data.saran._id]: data.data.userVote
       });
-
     } catch (error) {
       console.error("Error fetching detail:", error);
+      setNotFound(true); // Set notFound state on error
+    } finally {
+      setIsLoading(false);  // Set loading state to false after fetching is complete
     }
-  }
-
-  console.log("Detail Advice vote:", detailAdvice);
+  };
 
   const handleVote = async (saranId, voteType) => {
     try {
@@ -102,8 +111,22 @@ function DetailPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full border-4 border-gray-300 border-t-gray-900 h-12 w-12" />
+                <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+            </div>
+        </div>
+    );
+}
 
-
+  if (notFound) {
+    return (
+        <><NotFound /></>
+    );
+}
 
   console.log("Detail Advice:", userVotes);
 

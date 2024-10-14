@@ -333,7 +333,7 @@ function Page() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Prodi">Pilih Prodi</SelectItem>
-                                            <SelectItem value="Masukkan">Buat Grup Saran Baru</SelectItem>
+                                            <SelectItem value="Fakultas">Buat Grup Saran Baru</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -384,7 +384,7 @@ function Page() {
                                 </div>
                             )}
 
-                            {actionType === 'Masukkan' && (
+                            {actionType === 'Fakultas' && (
                                 <div className="grid gap-3">
                                     <Label htmlFor="web">Pilih Web yang Ada</Label>
                                     <Select onValueChange={handleWebChange}>

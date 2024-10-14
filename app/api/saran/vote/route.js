@@ -55,7 +55,6 @@ export async function PATCH(req) {
     await connectMongoDB();
     const { searchParams } = new URL(req.url);
     const saranId = searchParams.get("saranId");
-
     const body = await req.json();
     const { userId, voteType } = body;
 
@@ -68,21 +67,18 @@ export async function PATCH(req) {
 
     try {
         const existingVote = await Vote.findOne({ saranId: saranId, userId: userId });
-
         let voteChange = 0;
 
         if (existingVote) {
-            // Jika user sudah pernah vote, cek apakah mereka mengganti vote-nya
-            if (existingVote.voteType !== voteType) {
-                voteChange = voteType === 'upvote' ? 1: -1; // Perubahan dari downvote ke upvote atau sebaliknya
+            if (existingVote.voteType === voteType) {
+                // Jika voteType sama, hapus vote untuk mengembalikan ke keadaan semula
+                await Vote.deleteOne({ _id: existingVote._id });
+                voteChange = voteType === 'upvote' ? -1 : 1;
+            } else {
+                // Jika voteType berbeda, perbarui voteType
+                voteChange = voteType === 'upvote' ? 1 : -1;
                 existingVote.voteType = voteType;
                 await existingVote.save();
-            } else {
-                // Jika vote tetap sama, tidak ada perubahan
-                return new Response(
-                    JSON.stringify({ success: true, message: 'No change in vote' }),
-                    { status: 200 }
-                );
             }
         } else {
             // Jika belum ada vote, tambahkan vote baru
@@ -92,14 +88,13 @@ export async function PATCH(req) {
                 voteType: voteType,
             });
 
-            voteChange = voteType === 'upvote' ? 1 : -1; // Jika upvote tambah 1, jika downvote kurang 1
+            voteChange = voteType === 'upvote' ? 1 : -1; 
             await newVote.save();
         }
 
-        // Update score di saran berdasarkan perubahan vote
         const updatedSaran = await Saran.findByIdAndUpdate(
             saranId,
-            { $inc: { voteScore: voteChange } }, // Tambah atau kurangi score
+            { $inc: { voteScore: voteChange } },
             { new: true }
         );
 

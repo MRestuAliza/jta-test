@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from "next/link";
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
-import { Search, MoreVertical } from "lucide-react";
+import { Search, MoreVertical, Delete } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,8 @@ import {
     TabsTrigger,
 } from "@/components/ui/tabs";
 import Swal from 'sweetalert2';
+import DeletePopup from '@/components/General/DeletePopup';
+
 
 function AdvicePage() {
     const { status } = useSession();
@@ -181,7 +183,7 @@ function AdvicePage() {
             )
         );
     };
-    
+
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -292,7 +294,7 @@ function AdvicePage() {
                     </Tabs>
                 </main>
             </div>
-
+            {/* 
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -304,8 +306,18 @@ function AdvicePage() {
                         <AlertDialogAction onClick={handleDelete} className="bg-red-500">Delete</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
-
+            </AlertDialog> */}
+            <DeletePopup
+                open={!!deleteId}
+                onOpenChange={(open) => !open && setDeleteId(null)}
+                title={`Konfirmasi Menghapus ${filteredAdvices.find(department => department._id === deleteId)?.name}`}
+                description="Apakah Anda yakin ingin menghapus data ini? Semua saran yang terkait juga akan dihapus."
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteId(null)}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                confirmClass="bg-red-500"
+            />
             <AlertDialog open={!!editId} onOpenChange={(open) => !open && setEditId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

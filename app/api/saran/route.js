@@ -3,6 +3,7 @@ import GroupSaran from '@/models/groupSaranSchema';
 import Saran from "@/models/saranSchema";
 import User from "@/models/userSchema";
 import mongoose from "mongoose";
+import Vote from '@/models/voteSchema';
 
 export async function GET(req) {
     await connectMongoDB();
@@ -10,7 +11,7 @@ export async function GET(req) {
     const link = url.searchParams.get('link');
     const id = url.searchParams.get('id');
     const sid = url.searchParams.get('sid');
-    
+
     try {
         let groupSaran;
 
@@ -19,7 +20,7 @@ export async function GET(req) {
         } else if (id && mongoose.Types.ObjectId.isValid(id)) {
             groupSaran = await GroupSaran.findById(id);
         } else if (sid && mongoose.Types.ObjectId.isValid(sid)) {
-            const saran = await Saran.findById(sid).populate('created_by', 'name profilePicture'); 
+            const saran = await Saran.findById(sid).populate('created_by', 'name profilePicture');
             if (!saran) {
                 return new Response(JSON.stringify({
                     success: false,
@@ -203,3 +204,52 @@ export async function PATCH(req) {
     }
 }
 
+export async function DELETE(req) {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return new Response(JSON.stringify({
+            success: false,
+            message: "Invalid ID format",
+            data: null
+        }), {
+            status: 400,
+        });
+    }
+
+    if (!id) {
+        return new Response(JSON.stringify({ message: "ID is required" }), {
+            status: 400,
+        });
+    }
+
+    try {
+        await connectMongoDB();
+        const Advice = await Saran.findById(id);
+
+        if (!Advice) {
+            return new NextResponse(JSON.stringify({ message: "Advice not found" }), {
+                status: 404,
+            });
+        }
+
+        await Saran.findByIdAndDelete(id);
+        await Vote.deleteMany({ saranId: id });
+
+        return new Response(JSON.stringify({ message: "Advice and related votes deleted" }), {
+            status: 200,
+        });
+        
+    } catch (error) {
+        console.error(error.message);
+        return new Response(JSON.stringify({
+            success: false,
+            message: "Internal server error",
+            data: null,
+            error: error.message
+        }), {
+            status: 500,
+        });
+    }
+}

@@ -20,9 +20,8 @@ import withAuth from '@/libs/withAuth';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"
 import Swal from 'sweetalert2';
-import Link from 'next/link';
 import NotFound from '@/app/not-found';
-import { set } from 'mongoose';
+
 
 function AdviceGroupPage() {
     const { id: groupSaranId } = useParams();
@@ -37,6 +36,8 @@ function AdviceGroupPage() {
     const [notFound, setNotFound] = useState(false);
     const [userVotes, setUserVotes] = useState({});
     const params = useParams();
+    const [isLoading, setIsLoading] = useState(true);
+    
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -50,41 +51,85 @@ function AdviceGroupPage() {
         setFormWeb({ ...formWeb, [name]: value });
     }
 
-    const fetchAdviceGroup = async (id) => {
+    // const fetchAdviceGroup = async () => {
+    //     setIsLoading(true);
+    //     try {
+    //         const response = await fetch(`/api/group-saran/${params.id}`);
+    //         if (!response.ok) {
+    //             setNotFound(true);
+    //             throw new Error('Network response was not ok');
+    //         }
+    //         const data = await response.json();
+    //         setAdvicesGroup(data.data);
+    //     } catch (error) {
+    //         console.error('Failed to fetch advice:', error);
+    //     }
+    // };
+
+    // const fetchAdvice = async () => {
+    //     setIsLoading(true);
+    //     try {
+    //         const response = await fetch(`/api/saran/vote?link=${groupSaranId}&userId=${session.user.id}`);
+    //         if (!response.ok) {
+    //             throw new Error('Data tidak ditemukan');
+    //         }
+    //         const data = await response.json();
+    //         console.log('Data from API:', data);  // Cek apakah data sudah sampai di frontend
+
+    //         if (!data || !data.data || data.data.length === 0) {
+    //             setNotFound(true);
+    //         } else {
+    //             setAdvice(data.data.saranList);
+    //             setUserVotes(data.data.userVotes); // Status vote user untuk tiap saran
+    //             setNotFound(false);
+    //         }
+    //     } catch (error) {
+    //         console.error(error);
+    //         setNotFound(true); // Set notFound state to true on error
+    //     }
+    // }
+
+    const fetchAdviceGroup = async () => {
+        setIsLoading(true);
         try {
-            const response = await fetch(`/api/group-saran/${id}`);
+            const response = await fetch(`/api/group-saran/${params.id}`);
             if (!response.ok) {
+                setNotFound(true);
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            setAdviceGroup(data.data);
-            setSaranCount(data.count);
+            setAdvicesGroup(data.data);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
+            setNotFound(true); // Update notFound state jika ada error
+        } finally {
+            setIsLoading(false); // Pastikan isLoading diubah ke false di sini
         }
     };
-
+    
     const fetchAdvice = async () => {
+        setIsLoading(true);
         try {
             const response = await fetch(`/api/saran/vote?link=${groupSaranId}&userId=${session.user.id}`);
             if (!response.ok) {
                 throw new Error('Data tidak ditemukan');
             }
             const data = await response.json();
-            console.log('Data from API:', data);  // Cek apakah data sudah sampai di frontend
-
             if (!data || !data.data || data.data.length === 0) {
                 setNotFound(true);
             } else {
                 setAdvice(data.data.saranList);
-                setUserVotes(data.data.userVotes); // Status vote user untuk tiap saran
+                setUserVotes(data.data.userVotes);
                 setNotFound(false);
             }
         } catch (error) {
             console.error(error);
-            setNotFound(true); // Set notFound state to true on error
+            setNotFound(true);
+        } finally {
+            setIsLoading(false); // Pastikan isLoading diubah ke false di sini
         }
-    }
+    };
+    
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -176,6 +221,18 @@ function AdviceGroupPage() {
         }
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full border-4 border-gray-300 border-t-gray-900 h-12 w-12" />
+                    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+
     if (notFound) {
         return (
             <><NotFound /></>
@@ -193,7 +250,7 @@ function AdviceGroupPage() {
                             <Card className="sm:col-span-2">
                                 <form className="grid gap-6" onSubmit={handleSubmit}>
                                     <CardHeader>
-                                        <CardTitle>Masukkan Saran untuk ${}</CardTitle>
+                                        <CardTitle>Masukkan Saran untuk {advicesGroup.name}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="grid gap-6">

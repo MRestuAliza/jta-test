@@ -1,5 +1,6 @@
 import { connectMongoDB } from "@/libs/mongodb";
 import GroupSaran from "@/models/groupSaranSchema";
+import Saran from "@/models/saranSchema";
 import { customAlphabet } from 'nanoid';
 import Fakultas from "@/models/fakultasSchema"; // Impor model Fakultas
 import Universitas from "@/models/universitasSchema"; // Impor model Universitas
@@ -11,18 +12,6 @@ import validator from 'validator';
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 21);
 
-// export async function GET(req, res) {
-//   await connectMongoDB();
-
-//   try {
-//     const prodiList = await GroupSaran.find({});
-//     return new Response(JSON.stringify({ success: true, data: prodiList }), {
-//       status: 200,
-//     });
-//   } catch (error) {
-//     return new Response(JSON.stringify({ success: false }), { status: 400 });
-//   }
-// }
 
 export async function GET() {
   await connectMongoDB();
@@ -33,8 +22,6 @@ export async function GET() {
       .populate({ path: 'fakultas_id', select: 'name', model: Fakultas })   // Mengambil nama dari Fakultas
       .populate({ path: 'university_id', select: 'name', model: Universitas }) // Mengambil nama dari Universitas
       .populate({ path: 'prodi_id', select: 'name', model: Prodi });     // Mengambil nama dari Prodi
-
-
     console.log("Data fetched:", prodiList);
 
     return new Response(JSON.stringify({ success: true, data: prodiList }), {
@@ -87,20 +74,23 @@ export async function DELETE(request) {
     }
 
     await connectMongoDB();
-
-    const adviceGroup = await GroupSaran.findByIdAndDelete(id);
+    const adviceGroup = await GroupSaran.findById(id);
 
     if (!adviceGroup) {
       return new NextResponse(JSON.stringify({ message: "Advice group not found" }), {
         status: 404,
       });
     }
-    return new NextResponse(JSON.stringify({ message: "Advice group deleted" }), {
+
+    await Saran.deleteMany({ groupSaranId: id });
+    await GroupSaran.findByIdAndDelete(id);
+
+    return new NextResponse(JSON.stringify({ message: "Advice group and related advices deleted" }), {
       status: 200,
     });
     
   } catch (error) {
-
+    return new NextResponse(JSON.stringify({ message: error.message }), { status: 500 });
   }
 }
 

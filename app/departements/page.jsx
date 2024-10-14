@@ -168,12 +168,16 @@ function DepartmentPage() {
         );
     };
 
+    const breadcrumbLinks = [
+        { label: "Departments", href: "/departments" },
+    ];
+
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Sidebar />
             <div className='flex flex-col sm:gap-4 sm:py-4 sm:pl-14'>
-                <Header BreadcrumbLinkTitle={"Departments"} />
+                <Header breadcrumbLinks={breadcrumbLinks} />
                 <main className='p-4 space-y-4'>
                     <div>
                         <Card x-chunk="dashboard-05-chunk-2">
