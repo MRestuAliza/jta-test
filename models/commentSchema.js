@@ -9,13 +9,16 @@ const CommentSchema = new mongoose.Schema({
     content: {
         type: String,
         required: true,
+        minlength: 1,
+        maxlength: 500,
     },
-    author: {
-        type: String,
-        required: true,
+    voteScore: {
+        type: Number,
+        default: 0,
     },
-    author_profile_picture: {
-        type: String,
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', 
         required: true,
     },
     created_at: {

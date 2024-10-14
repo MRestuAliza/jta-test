@@ -27,6 +27,7 @@ function DetailPage() {
   const { status, data: session } = useSession();
   const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [comments, setComments] = useState([]);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -64,6 +65,7 @@ function DetailPage() {
       setUserVotes({
         [data.data.saran._id]: data.data.userVote
       });
+      fetchComments();
     } catch (error) {
       console.error("Error fetching detail:", error);
       setNotFound(true); // Set notFound state on error
@@ -71,6 +73,25 @@ function DetailPage() {
       setIsLoading(false);  // Set loading state to false after fetching is complete
     }
   };
+
+  const fetchComments = async () => {
+    const response = await fetch(`/api/saran/comment?saran_id=${slug[0]}`)
+
+    try {
+      if (!response.ok) {
+        if (response.status === 404) {
+          setNotFound(true);
+        }
+        throw new Error("Failed to fetch detail");
+      }
+      const data = await response.json();
+      console.log("Comments data:", data.data);
+
+      setComments(Array.isArray(data.data) ? data.data : []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  }
 
   const handleVote = async (saranId, voteType) => {
     try {
@@ -95,10 +116,10 @@ function DetailPage() {
             voteScore: updatedSaran.data.voteScore
           }));
 
-          
+
           setUserVotes(prev => ({
             ...prev,
-            [saranId]: voteType  
+            [saranId]: voteType
           }));
         } else {
           console.error("Vote data not found or invalid response");
@@ -113,20 +134,20 @@ function DetailPage() {
 
   if (isLoading) {
     return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full border-4 border-gray-300 border-t-gray-900 h-12 w-12" />
-                <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-            </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full border-4 border-gray-300 border-t-gray-900 h-12 w-12" />
+          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
         </div>
+      </div>
     );
-}
+  }
 
   if (notFound) {
     return (
-        <><NotFound /></>
+      <><NotFound /></>
     );
-}
+  }
 
   console.log("Detail Advice:", userVotes);
 
@@ -193,97 +214,135 @@ function DetailPage() {
 
           {/* Komentar Utama */}
           <div className="w-full mt-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start gap-3">
-                    {/* Foto profil sementara dengan background color */}
-                    <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center">
-                      <span className="text-white font-bold">A</span>
-                    </div>
-                    <div>
-                      <CardTitle className="font-bold text-sm">Nama Pengguna</CardTitle>
-                      <CardDescription className="text-muted-foreground text-sm">
-                        Ini adalah isi komentar dari pengguna. Komentar ini memberikan pandangan atau saran terkait topik.
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-black rounded-lg p-2">
-                    <Button variant="ghost" className="p-1">
-                      <ChevronUp className="h-5 w-5" />
-                    </Button>
-                    <span className="text-sm">12</span>
-                    <Button variant="ghost" className="p-1">
-                      <ChevronDown className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
-                <span>Oct 2, 2024</span>
-                {/* Button untuk memunculkan form balasan */}
-                <Button variant="link" className="text-xs" onClick={toggleReplyForm}>
-                  {showReplyForm ? "Sembunyikan Balasan" : "Balas"}
-                </Button>
-              </CardFooter>
-            </Card>
+            {Array.isArray(comments) && comments.length > 0 ? (
+              comments.map((comment, index) => (
+                <div key={comment._id || index}> {/* Pastikan key unik untuk setiap komentar */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center">
+                            {comment.created_by?.profilePicture ? (
+                              <img
+                                src={comment.created_by.profilePicture}
+                                alt={comment.created_by?.name || "User profile"}
+                                className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              <span className="text-white font-bold">
+                                {comment.created_by?.name[0].toUpperCase() || "D"}
+                              </span>
+                            )}
+                          </div>
 
-            {/* Form Balasan muncul ketika showReplyForm true */}
-            {showReplyForm && (
-              <div className="ml-10 mt-3">
-                <Card>
-                  <form onSubmit={handleReplySubmit}>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Balas Komentar</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Textarea
-                        required
-                        id="reply"
-                        name="reply"
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        placeholder="Tulis balasan Anda..."
-                        className="min-h-24"
-                      />
-                    </CardContent>
-                    <CardFooter>
-                      <Button type="submit" className="w-full">
-                        Kirim Balasan
-                      </Button>
-                    </CardFooter>
-                  </form>
-                </Card>
-              </div>
-            )}
-
-            {/* Contoh Balasan */}
-            {showReplies && (
-              <div className="ml-10 mt-3">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start gap-3">
-                        {/* Foto profil sementara dengan background color */}
-                        <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
-                          <span className="text-white font-bold">B</span>
+                          <div>
+                            <CardTitle className="font-bold text-sm">
+                              {comment.created_by?.name || "Nama Pengguna"}
+                            </CardTitle>
+                            <CardDescription className="text-muted-foreground text-sm">
+                              {comment.content || "Ini adalah isi komentar dari pengguna."}
+                            </CardDescription>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="font-bold text-sm">Nama Pengguna Lain</CardTitle>
-                          <CardDescription className="text-muted-foreground text-sm">
-                            Ini adalah balasan terhadap komentar di atas. Balasan ini menunjukkan pandangan lain.
-                          </CardDescription>
+                        <div className="flex items-center text-black rounded-lg p-2">
+                          <Button variant="ghost" className="p-1">
+                            <ChevronUp className="h-5 w-5" />
+                          </Button>
+                          <span className="text-sm">{comment.voteScore || 0}</span>
+                          <Button variant="ghost" className="p-1">
+                            <ChevronDown className="h-5 w-5" />
+                          </Button>
                         </div>
                       </div>
+                    </CardHeader>
+                    <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+                      <span>{new Date(comment.created_at).toLocaleDateString()}</span> {/* Format tanggal */}
+                      <Button
+                        variant="link"
+                        className="text-xs"
+                        onClick={() => toggleReplyForm(comment._id)}
+                      >
+                        {showReplyForm === comment._id ? "Sembunyikan Balasan" : "Balas"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+
+                  {/* Form balasan hanya ditampilkan jika `showReplyForm` cocok dengan komentar yang sedang ditampilkan */}
+                  {showReplyForm === comment._id && (
+                    <div className="ml-10 mt-3">
+                      <Card>
+                        <form onSubmit={(e) => handleReplySubmit(e, comment._id)}>
+                          <CardHeader>
+                            <CardTitle className="text-sm">Balas Komentar</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <Textarea
+                              required
+                              id="reply"
+                              name="reply"
+                              value={replyContent}
+                              onChange={(e) => setReplyContent(e.target.value)}
+                              placeholder="Tulis balasan Anda..."
+                              className="min-h-24"
+                            />
+                          </CardContent>
+                          <CardFooter>
+                            <Button type="submit" className="w-full">
+                              Kirim Balasan
+                            </Button>
+                          </CardFooter>
+                        </form>
+                      </Card>
                     </div>
-                  </CardHeader>
-                  <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span>Oct 3, 2024</span>
-                  </CardFooter>
-                </Card>
-              </div>
+                  )}
+
+                  {/* Contoh menampilkan balasan, jika ada */}
+                  {showReplies[comment._id] && (
+                    <div className="ml-10 mt-3">
+                      {comment.replies?.map((reply) => (
+                        <Card key={reply._id}>
+                          <CardHeader className="pb-3">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center">
+                                  {comment.created_by?.profilePicture ? (
+                                    <img
+                                      src={comment.created_by.profilePicture}
+                                      alt={comment.created_by?.name || "User profile"}
+                                      className="w-full h-full rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-white font-bold">
+                                      {comment.created_by?.name[0].toUpperCase() || "D"}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <CardTitle className="font-bold text-sm">
+                                    {reply.created_by?.name || "Nama Pengguna Lain"}
+                                  </CardTitle>
+                                  <CardDescription className="text-muted-foreground text-sm">
+                                    {reply.content || "Ini adalah balasan terhadap komentar di atas."}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>{new Date(reply.created_at).toLocaleDateString()}</span> {/* Format tanggal */}
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-center">Tidak ada komentar.</p>
             )}
           </div>
+
+
         </main>
       </div>
     </div>
