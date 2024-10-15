@@ -1,9 +1,10 @@
+
 import mongoose from 'mongoose';
 
-const CommentSchema = new mongoose.Schema({
-    saran_id: {
+const ReplySchema = new mongoose.Schema({
+    comment_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Saran',
+        ref: 'Comment',
         required: true,
     },
     content: {
@@ -11,10 +12,6 @@ const CommentSchema = new mongoose.Schema({
         required: true,
         minlength: 1,
         maxlength: 500,
-    },
-    voteScore: {
-        type: Number,
-        default: 0,
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,
@@ -25,12 +22,6 @@ const CommentSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    replyIds: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Reply',
-        }
-    ],
 });
 
-export default mongoose.models.Comment || mongoose.model('Comment', CommentSchema);
+export default mongoose.models.Reply || mongoose.model('Reply', ReplySchema);

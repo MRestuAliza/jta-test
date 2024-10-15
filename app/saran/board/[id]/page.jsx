@@ -51,44 +51,6 @@ function AdviceGroupPage() {
         setFormWeb({ ...formWeb, [name]: value });
     }
 
-    // const fetchAdviceGroup = async () => {
-    //     setIsLoading(true);
-    //     try {
-    //         const response = await fetch(`/api/group-saran/${params.id}`);
-    //         if (!response.ok) {
-    //             setNotFound(true);
-    //             throw new Error('Network response was not ok');
-    //         }
-    //         const data = await response.json();
-    //         setAdvicesGroup(data.data);
-    //     } catch (error) {
-    //         console.error('Failed to fetch advice:', error);
-    //     }
-    // };
-
-    // const fetchAdvice = async () => {
-    //     setIsLoading(true);
-    //     try {
-    //         const response = await fetch(`/api/saran/vote?link=${groupSaranId}&userId=${session.user.id}`);
-    //         if (!response.ok) {
-    //             throw new Error('Data tidak ditemukan');
-    //         }
-    //         const data = await response.json();
-    //         console.log('Data from API:', data);  // Cek apakah data sudah sampai di frontend
-
-    //         if (!data || !data.data || data.data.length === 0) {
-    //             setNotFound(true);
-    //         } else {
-    //             setAdvice(data.data.saranList);
-    //             setUserVotes(data.data.userVotes); // Status vote user untuk tiap saran
-    //             setNotFound(false);
-    //         }
-    //     } catch (error) {
-    //         console.error(error);
-    //         setNotFound(true); // Set notFound state to true on error
-    //     }
-    // }
-
     const fetchAdviceGroup = async () => {
         setIsLoading(true);
         try {
