@@ -23,7 +23,6 @@ export function LoginForm() {
         password: ''
     });
     const [loadingForm, setLoadingForm] = useState(false);
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
@@ -41,31 +40,23 @@ export function LoginForm() {
         if (res.ok) {
             router.push('/dashboard');
         } else {
-            // setError(res.error);
             setLoadingForm(false);
             console.log('Login failed:', res.error);
 
         }
     };
-
     const handleGoogleSignIn = async () => {
-        // setError(null);
-        // setLoadingGoogle(true);
-
-        console.log('Starting Google sign-in process');
-
         const googleRes = await signIn('google', { redirect: false });
-
-        console.log('Google sign-in response:', googleRes);
-
-        if (googleRes.ok) {
-            console.log('Google sign-in successful, redirecting to /dashboard');
-            router.push('/dashboard');
-        } else {
-            console.log('Google sign-in failed:', googleRes.error);
-            //   setError(googleRes.error);
-            //   setLoadingGoogle(false);
-        }
+        setTimeout(() => {
+            if (googleRes && googleRes.ok) {
+                console.log('Google sign-in successful, redirecting to /dashboard');
+                router.push('/dashboard');
+            } else {
+                console.log('Google sign-in failed:', googleRes?.error);
+                setError(googleRes?.error);
+                setLoadingGoogle(false);
+            }
+        }, 500);
     };
 
     return (
@@ -102,7 +93,7 @@ export function LoginForm() {
                                 <Input id="password" type="password" name="password" required value={formData.password} onChange={handleInputChange} />
                             </div>
                             <Button type="submit" className="w-full">
-                                {loadingForm ? <Loading />: "Login"}
+                                {loadingForm ? <Loading /> : "Login"}
                             </Button>
                         </form>
                         <Button onClick={handleGoogleSignIn} variant="outline" className="w-full pt-2">

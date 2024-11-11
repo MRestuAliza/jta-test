@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link"
 import {
     Mail,
@@ -8,7 +8,12 @@ import {
     ArrowUpRight,
 
 } from "lucide-react"
-
+import {
+    ChartConfig,
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from "@/components/ui/chart"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,23 +32,40 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import Chart from "../../components/Dashboard/Chart"
+import { formatDate } from "@/libs/dateUtils";
 import Sidebar from "@/components/General/Sidebar"
 import Header from "@/components/General/Header"
 import withAuth from "@/libs/withAuth"
 import { useSession } from "next-auth/react";
+import { Label, Pie, PieChart } from "recharts"
 
 export function Dashboard() {
     const { status } = useSession();
     const [currentDisplayed, setCurrentDisplayed] = useState(0);
-    const [animatedNewSaran, setAnimatedNewSaran] = useState(0);
+    const [saranList, setSaranList] = useState([]);
+    const [userCount, setUserCount] = useState({ admin: 0, superAdmin: 0, mahasiswa: 0 });
+    const [lastAdvice, setLastAdvice] = useState([]);
+    const [totalStatus, setTotalStatus] = useState({
+        new: 0,
+        'work in progress': 0,
+        completed: 0,
+        cancelled: 0,
+    });
+    const [isPageLoading, setIsPageLoading] = useState(true);
 
     useEffect(() => {
         if (status === "authenticated") {
-            fetchSaranCount()
+            loadData();
         }
     }, [status]);
 
+    const loadData = async () => {
+        fetchSaranCount()
+        fetchSaranListCount()
+        fetchLastAdvice()
+        fetchRoleCount()
+        setIsPageLoading(false);
+    }
 
     const fetchSaranCount = async () => {
         try {
@@ -52,20 +74,72 @@ export function Dashboard() {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            
             const totalSaran = data.total;
-            const totalAdviceLastMonth = data.totalLastMonth;
-
+            setTotalStatus(data.statusCounts);
             animateCounter(currentDisplayed, totalSaran, setCurrentDisplayed);
-            animateCounter(0, totalAdviceLastMonth, setAnimatedNewSaran);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
         }
     };
 
+
+    const fetchSaranListCount = async () => {
+        try {
+            const response = await fetch("/api/dashboard/suggestions-summary");
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            const formattedData = Object.entries(data.data).map(([key, value]) => ({
+                institution: key,
+                totalSuggestions: `${value.toFixed(0)}`
+            }));
+            setSaranList(formattedData);
+        } catch (error) {
+            console.error('Failed to fetch advice:', error);
+        }
+    }
+
+    const fetchLastAdvice = async () => {
+        try {
+            const response = await fetch("/api/dashboard/last-advice");
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            setLastAdvice(data.data);
+        } catch (error) {
+            console.error('Failed to fetch advice:', error);
+        }
+    }
+
+    const fetchRoleCount = async () => {
+        try {
+            const response = await fetch("/api/dashboard/user-count");
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            animateCounter(userCount.admin, data.data.admin, (value) =>
+                setUserCount((prev) => ({ ...prev, admin: value }))
+            );
+
+            animateCounter(userCount.superAdmin, data.data.superAdmin, (value) =>
+                setUserCount((prev) => ({ ...prev, superAdmin: value }))
+            );
+
+            animateCounter(userCount.mahasiswa, data.data.mahasiswa, (value) =>
+                setUserCount((prev) => ({ ...prev, mahasiswa: value }))
+            );
+
+        } catch (error) {
+            console.error('Failed to fetch role count:', error);
+        }
+    }
+
     const animateCounter = (start, end, setValue) => {
         const increment = Math.ceil((end - start) / 50);
-        
+
         let current = start;
 
         const interval = setInterval(() => {
@@ -77,6 +151,46 @@ export function Dashboard() {
             setValue(current);
         }, 50);
     };
+
+    const chartData = useMemo(() => [
+        { status: "In Progress", visitors: totalStatus["work in progress"], fill: "var(--color-progress)" },
+        { status: "New", visitors: totalStatus["new"], fill: "var(--color-new)" },
+        { status: "Cancelled", visitors: totalStatus["cancelled"], fill: "var(--color-cancelled)" },
+        { status: "Completed", visitors: totalStatus["completed"], fill: "var(--color-done)" },
+    ], [totalStatus]);
+
+    const chartConfig = {
+        visitors: {
+            label: "Visitors",
+        },
+        progress: {
+            label: "In Progress",
+            color: "#63b2fd",
+        },
+        new: {
+            label: "New",
+            color: "#9bdfc4",
+        },
+        cancelled: {
+            label: "Cancelled",
+            color: "#f99cab",
+        },
+        done: {
+            label: "Done",
+            color: "#ffb44f",
+        },
+    }
+
+    if (isPageLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full border-4 border-gray-300 border-t-gray-900 h-12 w-12" />
+                    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -93,9 +207,6 @@ export function Dashboard() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{currentDisplayed}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    +{animatedNewSaran} Dari Bulan Lalu
-                                </p>
                             </CardContent>
                         </Card>
                         <Card x-chunk="dashboard-05-chunk-2">
@@ -104,10 +215,7 @@ export function Dashboard() {
                                 <Users className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">+2350</div>
-                                <p className="text-xs text-muted-foreground">
-                                    +12 from last month
-                                </p>
+                                <div className="text-2xl font-bold">{userCount.superAdmin}</div>
                             </CardContent>
                         </Card>
                         <Card x-chunk="dashboard-05-chunk-3">
@@ -116,77 +224,106 @@ export function Dashboard() {
                                 <Users className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">+2350</div>
-                                <p className="text-xs text-muted-foreground">
-                                    +13 from last month
-                                </p>
+                                <div className="text-2xl font-bold">{userCount.admin}</div>
                             </CardContent>
                         </Card>
                         <Card x-chunk="dashboard-05-chunk-4">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardDescription>Total Students</CardDescription>
+                                <CardDescription>Total Mahasiswa</CardDescription>
                                 <Users className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">+2350</div>
-                                <p className="text-xs text-muted-foreground">
-                                    +100from last month
-                                </p>
+                                <div className="text-2xl font-bold">{userCount.mahasiswa}</div>
                             </CardContent>
                         </Card>
                     </div>
 
 
                     <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-                        <Chart />
+                        <Card className="flex flex-col">
+                            <CardHeader className="items-center pb-0">
+                                <CardTitle>Feedback Analytics</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex-1 pb-0">
+                                <ChartContainer
+                                    config={chartConfig}
+                                    className="mx-auto aspect-square max-h-[250px]"
+                                >
+                                    <PieChart>
+                                        <ChartTooltip
+                                            cursor={false}
+                                            content={<ChartTooltipContent hideLabel />}
+                                        />
+                                        <Pie
+                                            data={chartData}
+                                            dataKey="visitors"
+                                            nameKey="status"
+                                            innerRadius={60}
+                                            strokeWidth={5}
+                                        >
+                                            <Label
+                                                content={({ viewBox }) => {
+                                                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                                        return (
+                                                            <text
+                                                                x={viewBox.cx}
+                                                                y={viewBox.cy}
+                                                                textAnchor="middle"
+                                                                dominantBaseline="middle"
+                                                            >
+                                                                <tspan
+                                                                    x={viewBox.cx}
+                                                                    y={viewBox.cy}
+                                                                    className="fill-foreground text-3xl font-bold"
+                                                                >
+                                                                    {currentDisplayed}
+                                                                </tspan>
+                                                                <tspan
+                                                                    x={viewBox.cx}
+                                                                    y={(viewBox.cy || 0) + 24}
+                                                                    className="fill-muted-foreground"
+                                                                >
+                                                                    Saran
+                                                                </tspan>
+                                                            </text>
+                                                        )
+                                                    }
+                                                }}
+                                            />
+                                        </Pie>
+                                    </PieChart>
+                                </ChartContainer>
+                            </CardContent>
+                        </Card>
                         <Card x-chunk="dashboard-05-chunk-2">
                             <CardHeader className="flex flex-row items-center">
                                 <div className="grid gap-2">
-                                    <CardTitle>Suggestions Summary</CardTitle>
-                                    {/* <CardDescription>
-                                        Recent transactions from your store.
-                                    </CardDescription> */}
+                                    <CardTitle>Total Saran</CardTitle>
+                                    <CardDescription>
+                                        Total saran setiap institusi
+                                    </CardDescription>
                                 </div>
-                                <Button asChild size="sm" className="ml-auto gap-1">
-                                    <Link href="#">
-                                        View All
-                                        <ArrowUpRight className="h-4 w-4" />
-                                    </Link>
-                                </Button>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto max-h-64">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Customer</TableHead>
+                                                <TableHead>Institution</TableHead>
                                                 <TableHead className="hidden xl:table-column">Name</TableHead>
-                                                <TableHead className="hidden xl:table-column">Status</TableHead>
-                                                <TableHead className="hidden xl:table-column">Date</TableHead>
-                                                <TableHead className="text-right">Total Suggestions</TableHead>
+                                                {/* <TableHead className="hidden xl:table-column">Status</TableHead>
+                                                <TableHead className="hidden xl:table-column">Date</TableHead> */}
+                                                <TableHead className="text-right">Total</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            <TableRow>
-                                                <TableCell>Fakultas Teknik</TableCell>
-                                                <TableCell className="hidden md:table-cell lg:hidden xl:table-column">2023-06-23</TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>Fakultas Teknik</TableCell>
-                                                <TableCell className="hidden md:table-cell lg:hidden xl:table-column">2023-06-23</TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>Fakultas Teknik</TableCell>
-                                                <TableCell className="hidden md:table-cell lg:hidden xl:table-column">2023-06-23</TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>Fakultas Teknik</TableCell>
-                                                <TableCell className="hidden md:table-cell lg:hidden xl:table-column">2023-06-23</TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
+                                            {saranList.map((saran, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell>{saran.institution}</TableCell>
+                                                    <TableCell className="hidden md:table-cell lg:hidden xl:table-column">-</TableCell>
+                                                    <TableCell className="text-right">{saran.totalSuggestions}</TableCell>
+                                                </TableRow>
+                                            ))}
                                         </TableBody>
                                     </Table>
 
@@ -196,208 +333,60 @@ export function Dashboard() {
                         </Card>
                     </div>
 
-                    {/* List all Advise */}
                     <div>
                         <Card x-chunk="dashboard-05-chunk-2">
                             <CardHeader className="flex flex-row items-center">
                                 <div className="grid gap-2">
-                                    <CardTitle>Suggestions</CardTitle>
-                                    {/* <CardDescription>
-                                        Recent transactions from your store.
-                                    </CardDescription> */}
+                                    <CardTitle>Saran</CardTitle>
+                                    <CardDescription>
+                                        Saran terbaru yang masuk
+                                    </CardDescription>
                                 </div>
-                                <Button asChild size="sm" className="ml-auto gap-1">
-                                    <Link href="#">
-                                        View All
-                                        <ArrowUpRight className="h-4 w-4" />
-                                    </Link>
-                                </Button>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto max-h-80">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Customer</TableHead>
+                                                <TableHead>Saran</TableHead>
                                                 <TableHead className="hidden sm:table-cell">
-                                                    Type
+                                                    Saran Untuk
                                                 </TableHead>
                                                 <TableHead className="hidden sm:table-cell">
                                                     Status
                                                 </TableHead>
+                                                <TableHead className="">Dibuat Oleh</TableHead>
                                                 <TableHead className="hidden md:table-cell">
-                                                    Date
+                                                    Tanggal
                                                 </TableHead>
-                                                <TableHead className="text-right">Amount</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            <TableRow className="bg-accent">
-                                                <TableCell>
-                                                    <div className="font-medium">Liam Johnson</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        liam@example.com lkajsbfldkjbsaklbfkljasdbkljbdslk
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Sale
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="secondary">
-                                                        Fulfilled
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-23
-                                                </TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Olivia Smith</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        olivia@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Refund
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="outline">
-                                                        Declined
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-24
-                                                </TableCell>
-                                                <TableCell className="text-right">$150.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Noah Williams</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        noah@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Subscription
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="secondary">
-                                                        Fulfilled
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-25
-                                                </TableCell>
-                                                <TableCell className="text-right">$350.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Emma Brown</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        emma@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Sale
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="secondary">
-                                                        Fulfilled
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-26
-                                                </TableCell>
-                                                <TableCell className="text-right">$450.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Liam Johnson</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        liam@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Sale
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="secondary">
-                                                        Fulfilled
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-23
-                                                </TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Liam Johnson</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        liam@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Sale
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="secondary">
-                                                        Fulfilled
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-23
-                                                </TableCell>
-                                                <TableCell className="text-right">$250.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Olivia Smith</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        olivia@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Refund
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="outline">
-                                                        Declined
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-24
-                                                </TableCell>
-                                                <TableCell className="text-right">$150.00</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <div className="font-medium">Emma Brown</div>
-                                                    <div className="hidden text-sm text-muted-foreground md:inline">
-                                                        emma@example.com
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    Sale
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                    <Badge className="text-xs" variant="secondary">
-                                                        Fulfilled
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    2023-06-26
-                                                </TableCell>
-                                                <TableCell className="text-right">$450.00</TableCell>
-                                            </TableRow>
+                                            {lastAdvice.map((advice) => (
+                                                <TableRow className="">
+                                                    <TableCell key={advice._id}>
+                                                        <div className="font-medium">{advice.title}</div>
+                                                        <div className="hidden text-sm text-muted-foreground md:inline">
+                                                            {advice.description}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="hidden sm:table-cell">
+                                                        {advice.group_name}
+                                                    </TableCell>
+                                                    <TableCell className="hidden sm:table-cell">
+                                                        <Badge className="text-xs" variant="secondary">
+                                                            {advice.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="">{advice.created_by}</TableCell>
+                                                    <TableCell className="hidden md:table-cell">
+                                                        {formatDate(advice.created_at)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
                                         </TableBody>
                                     </Table>
-
-
                                 </div>
-
                             </CardContent>
                         </Card>
                     </div>

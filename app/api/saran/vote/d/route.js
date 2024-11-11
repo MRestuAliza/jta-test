@@ -6,10 +6,10 @@ import mongoose from "mongoose";
 export async function GET(req) {
     await connectMongoDB();
     const url = new URL(req.url);
-    const saranId = url.searchParams.get('saranId'); // Dapatkan saranId dari query params
-    const userId = url.searchParams.get('userId');  // Dapatkan userId dari query params (jika ada)
+    const saranId = url.searchParams.get('saranId');
+    const userId = url.searchParams.get('userId'); 
 
-    // Pastikan saranId valid
+
     if (!mongoose.Types.ObjectId.isValid(saranId)) {
         return new Response(
             JSON.stringify({ success: false, message: "Invalid Saran ID format" }),
@@ -18,7 +18,7 @@ export async function GET(req) {
     }
 
     try {
-        // Temukan saran berdasarkan saranId
+    
         const saran = await Saran.findById(saranId);
         if (!saran) {
             return new Response(JSON.stringify({
@@ -30,7 +30,7 @@ export async function GET(req) {
             });
         }
 
-        // Jika userId disediakan, cari vote yang telah diberikan oleh user
+    
         let userVote = null;
         if (userId) {
             const vote = await Vote.findOne({ userId: userId, saranId: saranId });
@@ -43,7 +43,7 @@ export async function GET(req) {
             success: true,
             data: {
                 saran: saran,
-                userVote: userVote // Status vote user (upvote/downvote)
+                userVote: userVote
             }
         }), {
             status: 200,

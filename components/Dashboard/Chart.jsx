@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { TrendingUp } from "lucide-react"
 import { Label, Pie, PieChart } from "recharts"
 
 import {
@@ -19,7 +18,7 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 const chartData = [
-    { status: "In Progress", visitors: 2, fill: "var(--color-progress)" },
+    { status: "In Progress", visitors: 20, fill: "var(--color-progress)" },
     { status: "New", visitors: 20, fill: "var(--color-new)" },
     { status: "Cancelled", visitors: 23, fill: "var(--color-cancelled)" },
     { status: "Done", visitors: 12, fill: "var(--color-done)" },

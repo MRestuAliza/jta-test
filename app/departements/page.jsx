@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from "next/link";
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
-import { ArrowUpRight, Search, MoreVertical } from "lucide-react";
+import { Search, MoreVertical } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,15 +30,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"; // Hapus AlertDialogTrigger
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import Swal from 'sweetalert2';
+import { Label } from "@/components/ui/label";
 import withAuth from '@/libs/withAuth';
 import { formatDate } from '@/libs/dateUtils';
-import { Label } from "@/components/ui/label"
-import Swal from 'sweetalert2';
 
 function DepartmentPage() {
     const [departments, setDepartments] = useState([]);
-    const { status } = useSession();
+    const { status, data: session } = useSession();
     const [deleteId, setDeleteId] = useState(null);
     const [editId, setEditId] = useState(null);
 
@@ -50,148 +50,139 @@ function DepartmentPage() {
 
     const fetchDepartments = async () => {
         try {
-            const response = await fetch(`/api/website/university/${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
-            const data = await response.json();
-
-            const universityData = data.data.websites.filter(item => item.type === 'Universitas');
-            const fakultasData = data.data.fakultas;
-
-            const combinedData = [...universityData, ...fakultasData];
-
+            let response;
+            let combinedData = []
+            if (session?.user?.role.startsWith('Admin')) {
+                response = await fetch(`/api/institusi?id=${session?.user?.departementId}&role=${session?.user?.role}`);
+                const data = await response.json();
+                if (session?.user?.type === 'Prodi') {
+                    combinedData = data.data.prodi_websites || [];
+                } else {
+                    combinedData = [
+                        ...(data.data.fakultas_websites || []),
+                        ...(data.data.prodi_list || []),
+                    ];
+                }
+            } else {
+                response = await fetch(`/api/institusi?id=${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
+                const data = await response.json();
+                combinedData = [
+                    ...(data.data.university_websites || []),
+                    ...(data.data.fakultas_list || []),
+                ];
+            }
             setDepartments(combinedData);
-            console.log(combinedData);
         } catch (error) {
             console.error(error);
         }
-    }
+    };
 
     const deleteDepartment = async (id) => {
         try {
-            const response = await fetch(`/api/departments/fakultas?id=${id}`, {
-                method: 'DELETE'
+            const response = await fetch(`/api/institusi?id=${id}`, {
+                method: 'DELETE',
             });
-
             if (response.ok) {
-                setDepartments(departments.filter(department => department._id !== id));
-                alert('Department deleted successfully');
+                setDepartments(prevDepartments => prevDepartments.filter(department => department._id !== id && department.id !== id));
+                Swal.fire('Berhasil!', 'Data berhasil dihapus.', 'success');
             } else {
-                const errorData = await response.json();
-                alert(`Error: ${errorData.message}`);
+                Swal.fire('Gagal!', 'Gagal menghapus data.', 'error');
             }
         } catch (error) {
-            console.error('Error deleting department:', error);
-            alert('An error occurred while deleting the department');
+            Swal.fire('Error!', 'Terjadi kesalahan saat menghapus data.', 'error');
         }
-    }
+    };
 
     const updateDepartment = async (id) => {
         try {
-            const department = departments.find(dept => dept._id === id);
+            const department = departments.find(dept => dept._id === id || dept.id === id);
+            console.log("Department a:", department);
+            if (!department) {
+                throw new Error("Department not found");
+            }
+
+            const updatedData = {
+                name: department.name,
+                link: department.link,
+            };
+
             let response;
-            if (department && department.type) {
-                response = await fetch(`/api/website/university/${id}`, {
+
+            if (department.link_advice) {
+                response = await fetch(`/api/website?id=${id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        name: department.name,
-                        link: department.link,
-                    }),
+                    body: JSON.stringify(updatedData),
                 });
             } else {
-                response = await fetch(`/api/departments/fakultas?id=${id}`, {
+                response = await fetch(`/api/institusi?id=${id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        name: department.name
-                    }),
+                    body: JSON.stringify(updatedData),
                 });
             }
 
             if (response.ok) {
-                // setDepartments(departments.filter(department => department._id !== id));
                 const updatedDepartment = await response.json();
-                setDepartments(departments.map(department =>
-                    department._id === id ? updatedDepartment.data : department
-                ));
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Sukses',
-                    text: 'Sukses Mengupdate Data',
-                    timer: 1000,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                }).then(() => {
-                    window.location.reload();
+                setDepartments(prevDepartments => {
+                    return prevDepartments.map(department =>
+                        department._id === id || department.id === id
+                            ? updatedDepartment.data
+                            : department
+                    );
                 });
-                // alert('Department updated successfully');
+                Swal.fire('Sukses Mengupdate Data', '', 'success');
             } else {
                 const errorData = await response.json();
-                // alert(`Error: ${errorData.message}`);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Erorr',
-                    text: 'Gagal Mengupdate Data',
-                    timer: 1000,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                });
+                Swal.fire(`Error: ${errorData.message}`, '', 'error');
             }
         } catch (error) {
-            console.error('Error updated department:', error);
-            alert('An error occurred while updated the department');
+            Swal.fire('An error occurred while updating the department', '', 'error');
         }
-    }
+    };
 
     const handleDelete = () => {
         if (deleteId) {
             deleteDepartment(deleteId);
             setDeleteId(null);
         }
-    }
+    };
+
     const handleUpdate = () => {
         if (editId) {
             updateDepartment(editId);
             setEditId(null);
         }
-    }
+    };
 
     const handleInputChange = (e, field) => {
         const { value } = e.target;
-        setDepartments(prevDepartments =>
-            prevDepartments.map(department =>
-                department._id === editId ? { ...department, [field]: value } : department
-            )
-        );
+        setDepartments(prevDepartments => {
+            const updatedDepartments = prevDepartments.map(department => {
+                if (department._id === editId || department.id === editId) {
+                    return { ...department, [field]: value };
+                }
+                return department;
+            });
+            return updatedDepartments;
+        });
     };
-
-    const breadcrumbLinks = [
-        { label: "Departments", href: "/departments" },
-    ];
-
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Sidebar />
             <div className='flex flex-col sm:gap-4 sm:py-4 sm:pl-14'>
-                <Header breadcrumbLinks={breadcrumbLinks} />
+                <Header BreadcrumbLinkTitle={"Departement"} />
                 <main className='p-4 space-y-4'>
                     <div>
-                        <Card x-chunk="dashboard-05-chunk-2">
+                        <Card>
                             <CardHeader className="flex flex-row items-center">
                                 <div className="grid gap-2">
                                     <CardTitle className="">List Departemen</CardTitle>
-                                </div>
-                                <div className="relative ml-auto flex-1 md:grow-0">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="search"
-                                        placeholder="Search..."
-                                        className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
-                                    />
                                 </div>
                             </CardHeader>
                             <CardContent>
@@ -200,56 +191,85 @@ function DepartmentPage() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Name</TableHead>
-                                                <TableHead className="hidden sm:table-cell">
-                                                    Link
-                                                </TableHead>
-                                                <TableHead className="hidden sm:table-cell">
-                                                    Level
-                                                </TableHead>
-                                                <TableHead className="hidden md:table-cell">
-                                                    Date
-                                                </TableHead>
+                                                <TableHead className="hidden sm:table-cell">Link</TableHead>
+                                                <TableHead className="hidden sm:table-cell">Level</TableHead>
+                                                <TableHead className="hidden md:table-cell">Date</TableHead>
                                                 <TableHead className="text-right"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {departments.map((department) => (
-                                                <TableRow key={department._id}>
-                                                    <TableCell>
-                                                        <div className="font-medium">{department.name}</div>
-                                                    </TableCell>
-                                                    <TableCell className="hidden sm:table-cell">
-                                                        {department.link}
-                                                    </TableCell>
-                                                    <TableCell className="hidden sm:table-cell">
-                                                        <Badge className="text-xs" variant="secondary">
-                                                            {department.type}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="hidden md:table-cell">
-                                                        {formatDate(department.updated_at)}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button size="icon" variant="outline" className="h-8 w-8">
-                                                                    <MoreVertical className="h-3.5 w-3.5" />
-                                                                    <span className="sr-only">More</span>
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem>
-                                                                    <Link className='w-full' href={`/departements/${department._id}`}>Open</Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => setEditId(department._id)}>Edit</DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                {/* Ubah ini untuk memicu dialog */}
-                                                                <DropdownMenuItem className='text-red-500' onClick={() => setDeleteId(department._id)}>Delete</DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                            {departments.map((department) => {
+                                                return (
+                                                    <TableRow key={department._id || department.id}>
+                                                        <TableCell>
+                                                            <div className="font-medium">{department.name}</div>
+                                                        </TableCell>
+                                                        <TableCell className="hidden sm:table-cell">
+                                                            {department.link || "-"}
+                                                        </TableCell>
+                                                        <TableCell className="hidden sm:table-cell">
+                                                            <Badge className="text-xs" variant="secondary">
+                                                                {department.type}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="hidden md:table-cell">
+                                                            {department.updated_at
+                                                                ? formatDate(department.updated_at)
+                                                                : "-"}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="outline"
+                                                                        className="h-8 w-8"
+                                                                    >
+                                                                        <MoreVertical className="h-3.5 w-3.5" />
+                                                                        <span className="sr-only">More</span>
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem>
+                                                                        {department.link_advice ? (
+                                                                            <Link
+                                                                                className="w-full"
+                                                                                href={`/saran/${department.link_advice}`}
+                                                                            >
+                                                                                Open
+                                                                            </Link>
+                                                                        ) : (
+                                                                            <Link
+                                                                                className="w-full"
+                                                                                href={`/departements/${department._id || department.id}`}
+                                                                            >
+                                                                                Open
+                                                                            </Link>
+                                                                        )}
+                                                                    </DropdownMenuItem>
+
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            setEditId(department._id || department.id)
+                                                                        }
+                                                                    >
+                                                                        Edit
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        className="text-red-500"
+                                                                        onClick={() =>
+                                                                            setDeleteId(department._id || department.id)
+                                                                        }
+                                                                    >
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
                                         </TableBody>
                                     </Table>
                                 </div>
@@ -263,7 +283,7 @@ function DepartmentPage() {
             <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Konfirmasi Menghapus {departments.find(department => department._id === deleteId)?.name}</AlertDialogTitle>
+                        <AlertDialogTitle>Konfirmasi Menghapus {deleteId && (departments.find(dept => dept._id === editId || dept.id === editId)?.name || "")}</AlertDialogTitle>
                         <AlertDialogDescription>Apakah Anda yakin ingin menghapus data ini? Semua data program studi, saran, dan website yang terkait juga akan dihapus</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -273,50 +293,61 @@ function DepartmentPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Dialog Konfirmasi Update */}
             <AlertDialog open={!!editId} onOpenChange={(open) => !open && setEditId(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Konfirmasi Mengedit {departments.find(department => department._id === editId)?.name}</AlertDialogTitle>
-                        <AlertDialogDescription className="grid gap-3 ">
-                            {departments.find(department => department._id === editId)?.type === 'Universitas' ? (
-                                <>
-                                    <div className='space-y-2'>
-                                        <Label htmlFor="name">Nama Website</Label>
-                                        <Input
-                                            id="name"
-                                            name="name"
-                                            value={departments.find(department => department._id === editId)?.name || ''}
-                                            onChange={(e) => handleInputChange(e, 'name')}
-                                            required
-                                            placeholder="Masukkan nama website"
-                                        />
-                                    </div>
-                                    <div className='space-y-2'>
-                                        <Label htmlFor="link">Link Website</Label>
-                                        <Input
-                                            id="link"
-                                            name="link"
-                                            value={departments.find(department => department._id === editId)?.link || ''}
-                                            onChange={(e) => handleInputChange(e, 'link')}
-                                            required
-                                            placeholder="Masukkan link website"
-                                        />
-                                    </div>
-                                </>
-                            ) : (
-                                <div className='space-y-2'>
-                                    <Label htmlFor="name">Nama Fakultas</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        value={departments.find(department => department._id === editId)?.name || ''}
-                                        onChange={(e) => handleInputChange(e, 'name')}
-                                        required
-                                        placeholder="Masukkan nama fakultas"
-                                        className="w-full"
-                                    />
-                                </div>
-                            )}
+                        <AlertDialogTitle>
+                            Konfirmasi Mengedit {editId && (departments.find(dept => dept._id === editId || dept.id === editId)?.name || "")}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="grid gap-3">
+                            {(() => {
+                                const department = editId && departments.find(dept => dept._id === editId || dept.id === editId);
+                                if (!department) return null;
+                                if (department.link_advice) {
+                                    return (
+                                        <>
+                                            <div className='space-y-2'>
+                                                <Label htmlFor="name">Nama Website</Label>
+                                                <Input
+                                                    id="name"
+                                                    name="name"
+                                                    value={department.name || ''}
+                                                    onChange={(e) => handleInputChange(e, 'name')}
+                                                    required
+                                                    placeholder="Masukkan nama website"
+                                                />
+                                            </div>
+                                            <div className='space-y-2'>
+                                                <Label htmlFor="link">Link Website</Label>
+                                                <Input
+                                                    id="link"
+                                                    name="link"
+                                                    value={department.link || ''}
+                                                    onChange={(e) => handleInputChange(e, 'link')}
+                                                    required
+                                                    placeholder="Masukkan link website"
+                                                />
+                                            </div>
+                                        </>
+                                    );
+                                } else {
+                                    return (
+                                        <div className='space-y-2'>
+                                            <Label htmlFor="name">Nama Fakultas</Label>
+                                            <Input
+                                                id="name"
+                                                name="name"
+                                                value={department.name || ''}
+                                                onChange={(e) => handleInputChange(e, 'name')}
+                                                required
+                                                placeholder="Masukkan nama fakultas"
+                                                className="w-full"
+                                            />
+                                        </div>
+                                    );
+                                }
+                            })()}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="justify-center">
@@ -326,7 +357,7 @@ function DepartmentPage() {
                 </AlertDialogContent>
             </AlertDialog>
         </div >
-    )
+    );
 }
 
 export default withAuth(DepartmentPage);

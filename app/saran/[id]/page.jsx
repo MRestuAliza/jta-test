@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/General/Sidebar';
 import Header from "@/components/General/Header";
 import { ChevronRight, ChevronUp, MessageSquare, ArrowRight, Trash2, Copy } from "lucide-react";
+import Link from 'next/link';
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import {
@@ -23,84 +24,66 @@ import {
 import withAuth from '@/libs/withAuth';
 import { Label } from "@/components/ui/label";
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from 'next/navigation'; // Import useParams
+import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import NotFound from '@/app/not-found';
 import DeletePopup from '@/components/General/DeletePopup';
 
 function AdviceGroupPage() {
-    const { status } = useSession();
-    const router = useRouter();
-    const [adviceGroup, setAdviceGroup] = useState(null);
+    const { status, data: session } = useSession();
+    const [adviceGroup, setAdviceGroup] = useState('');
     const { id } = useParams();
     const [advice, setAdvice] = useState([]);
     const [deleteId, setDeleteId] = useState(null);
-    const [saranCount, setSaranCount] = useState(0);
-    const [deleteGroupId, setDeleteGroupId] = useState(null);
     const [notFound, setNotFound] = useState(false);
-    
 
     useEffect(() => {
-        if (status === "authenticated" && id) {
-            fetchAdviceGroup(id);
-            fetchAdvice(id);
+        if (status === "authenticated") {
+            fetchAdviceGroup();
+            fetchAdvice();
         }
-    }, [status, id]);
+    }, [status]);
 
-    const fetchAdviceGroup = async (id) => {
+    const fetchAdviceGroup = async () => {
         try {
-            const response = await fetch(`/api/group-saran/${id}`);
+            const response = await fetch(`/api/group-saran?id=${id}`);
             if (!response.ok) {
                 setNotFound(true);
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
             setAdviceGroup(data.data);
-            setSaranCount(data.count);
+
+            // setSaranCount(data.count);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
         }
     };
 
-    const fetchAdvice = async (id) => {
+    const fetchAdvice = async () => {
         try {
-            const response = await fetch(`/api/saran?id=${id}`);
+            const response = await fetch(`/api/saran?link=${id}`);
             if (!response.ok) {
                 setNotFound(true);
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            setAdvice(data.data);
+            const adviceArray = Object.values(data.data);
+
+            setAdvice(adviceArray);
+            setNotFound(false);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
         }
     };
-
-    const deleteAdviceGroup = async (id) => {
-        try {
-            const response = await fetch(`/api/group-saran?id=${id}`, {
-                method: 'DELETE',
-            });
-
-            if (response.ok) {
-                setAdviceGroup(null);
-                setAdvice([]); 
-            } else {
-                throw new Error('Network response was not ok');
-            }
-        } catch (error) {
-            console.error('Failed to delete advice group:', error);
-        }
-    }
 
     const deleteAdvice = async (id) => {
         try {
             const response = await fetch(`/api/saran?id=${id}`, {
                 method: 'DELETE',
             });
-
             if (response.ok) {
-                setAdvice(prevSaran => prevSaran.filter(item => item._id !== id)); // Perbarui saran tanpa menghapus semuanya
+                setAdvice(prevSaran => prevSaran.filter(item => item._id !== id));
                 Swal.fire({
                     icon: 'success',
                     title: 'Sukses Menghapus Saran',
@@ -108,6 +91,8 @@ function AdviceGroupPage() {
                     timer: 1000,
                     timerProgressBar: true,
                     showConfirmButton: false,
+                }).then(() => {
+                    window.location.reload();
                 });
             } else {
                 throw new Error('Network response was not ok');
@@ -131,58 +116,6 @@ function AdviceGroupPage() {
             setDeleteId(null);
         }
     };
-
-    const handleDeleteGroup = () => {
-        if (deleteGroupId) {
-            deleteAdviceGroup(deleteGroupId);
-            setDeleteGroupId(null);
-            Swal.fire({
-                icon: 'success',
-                title: 'Sukses',
-                text: 'Sukses Menghapus Data',
-                timer: 1000,
-                timerProgressBar: true,
-                showConfirmButton: false,
-            }).then(() => {
-                router.push('/saran');
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Gagal Menghapus Data',
-                timer: 1000,
-                timerProgressBar: true,
-                showConfirmButton: false,
-            });
-        }
-    };
-
-    // const handleDelete = () => {
-    //     if (deleteGroupId) {
-    //         deleteAdviceGroup(deleteGroupId);
-    //         setDeleteGroupId(null);
-    //         Swal.fire({
-    //             icon: 'success',
-    //             title: 'Sukses',
-    //             text: 'Sukses Menghapus Data',
-    //             timer: 1000,
-    //             timerProgressBar: true,
-    //             showConfirmButton: false,
-    //         }).then(() => {
-    //             router.push('/saran');
-    //         });
-    //     } else {
-    //         Swal.fire({
-    //             icon: 'error',
-    //             title: 'Erorr',
-    //             text: 'Gagal Menghapus Data',
-    //             timer: 1000,
-    //             timerProgressBar: true,
-    //             showConfirmButton: false,
-    //         });
-    //     }
-    // }
 
     const handleCopyLink = (link) => {
         navigator.clipboard.writeText(link).then(() => {
@@ -208,22 +141,31 @@ function AdviceGroupPage() {
         });
     };
 
-    const handleUpdateStatus = async (saranId, newStatus) => {
+    const handleUpdateStatus = async (saranId, newStatus, emailList) => {
+
         try {
             const response = await fetch(`/api/saran?id=${saranId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ status: newStatus }),
+                body: JSON.stringify({
+                    status: newStatus,
+                    adminEmails: emailList
+                }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error('Failed to update status');
+                if (data && data.message) {
+                    throw new Error(data.message);
+                } else {
+                    throw new Error('Failed to update status');
+                }
             }
 
-            const data = await response.json();
-            setAdvice(advice.map(item => item._id === saranId ? { ...item, status: newStatus } : item)); // Update status di UI
+            setAdvice(advice.map(item => item._id === saranId ? { ...item, status: newStatus, adminEmails: emailList } : item));
             Swal.fire({
                 icon: 'success',
                 title: `Status updated to ${newStatus}`,
@@ -246,6 +188,7 @@ function AdviceGroupPage() {
         }
     };
 
+
     if (notFound) {
         return (
             <><NotFound /></>
@@ -261,7 +204,7 @@ function AdviceGroupPage() {
                     <p className="text-gray-500 dark:text-gray-400">Loading...</p>
                 </div>
             </div>
-        ); // Tampilkan loading jika data belum tersedia
+        );
     }
 
     return (
@@ -276,7 +219,7 @@ function AdviceGroupPage() {
                                 <CardHeader className="pb-3">
                                     <CardTitle>{adviceGroup.name}</CardTitle>
                                     <CardDescription className="max-w-lg text-balance leading-relaxed">
-                                        <p>Website ini memiliki {saranCount} saran</p>
+                                        <p>Website ini memiliki {adviceGroup.saranCount} saran</p>
 
                                         <div className="grid gap-3 pt-5">
                                             <Label htmlFor="link">Public link</Label>
@@ -285,13 +228,13 @@ function AdviceGroupPage() {
                                                     id="link"
                                                     type="text"
                                                     className="w-full"
-                                                    defaultValue={`http://localhost:3000/saran/board/${adviceGroup.link}`}
+                                                    value={`http://localhost:3000/saran/board/${adviceGroup.link_advice}`}
                                                     readOnly
                                                 />
                                                 <Button
                                                     variant="outline"
                                                     size="icon"
-                                                    onClick={() => handleCopyLink(`http://localhost:3000/saran/board/${adviceGroup.link}`)}
+                                                    onClick={() => handleCopyLink(`http://localhost:3000/saran/board/${adviceGroup.link_advice}`)}
                                                 >
                                                     <Copy className="h-5 w-5" />
                                                     <span className="sr-only">Copy link</span>
@@ -299,7 +242,7 @@ function AdviceGroupPage() {
                                                 <Button
                                                     variant="outline"
                                                     size="icon"
-                                                    onClick={() => window.open(`/saran/board/${adviceGroup.link}`, "_blank")}
+                                                    onClick={() => window.open(`/saran/board/${adviceGroup.link_advice}`, "_blank")}
                                                 >
                                                     <ChevronRight className="h-5 w-5" />
                                                     <span className="sr-only">Open link</span>
@@ -310,9 +253,6 @@ function AdviceGroupPage() {
 
                                 </CardHeader>
                                 <CardFooter>
-                                    <Button variant="link" size="sm" className="text-red-500" onClick={() => setDeleteGroupId(adviceGroup._id)}>
-                                        Delete <Trash2 className="ml-1 h-4 w-4" />
-                                    </Button>
                                 </CardFooter>
                             </Card>
                         </div>
@@ -331,7 +271,7 @@ function AdviceGroupPage() {
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
                                                         variant="outline"
-                                                        className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "done" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}
+                                                        className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "completed" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}
                                                     >
                                                         {item.status} <ChevronRight className="inline h-4 w-4" />
                                                     </Button>
@@ -339,28 +279,28 @@ function AdviceGroupPage() {
 
                                                 <DropdownMenuContent>
                                                     <DropdownMenuItem
-                                                        onClick={() => handleUpdateStatus(item._id, "new")}
+                                                        onClick={() => handleUpdateStatus(item._id, "new", item.email,)}
                                                         className="text-gray-500"
                                                     >
                                                         New
                                                     </DropdownMenuItem>
 
                                                     <DropdownMenuItem
-                                                        onClick={() => handleUpdateStatus(item._id, "work in progress")}
+                                                        onClick={() => handleUpdateStatus(item._id, "work in progress", item.email,)}
                                                         className="text-blue-400"
                                                     >
                                                         Work In Progress
                                                     </DropdownMenuItem>
 
                                                     <DropdownMenuItem
-                                                        onClick={() => handleUpdateStatus(item._id, "done")}
+                                                        onClick={() => handleUpdateStatus(item._id, "completed", item.email,)}
                                                         className="text-green-500"
                                                     >
-                                                        Done
+                                                        Completed
                                                     </DropdownMenuItem>
 
                                                     <DropdownMenuItem
-                                                        onClick={() => handleUpdateStatus(item._id, "cancelled")}
+                                                        onClick={() => handleUpdateStatus(item._id, "cancelled", item.email,)}
                                                         className="text-red-500"
                                                     >
                                                         Cancelled
@@ -373,11 +313,11 @@ function AdviceGroupPage() {
                                         <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-2">
                                                 <img
-                                                    src={item.created_by.profilePicture}
-                                                    alt={item.created_by.name}
+                                                    src={item.profile_picture}
+                                                    alt={item.profile_picture}
                                                     className="w-8 h-8 rounded-full"
                                                 />
-                                                <span>{item.created_by?.name}</span>
+                                                <span>{item.created_by}</span>
                                             </div>
                                             <Button variant="ghost" size="sm" className="flex items-center gap-1">
                                                 <ChevronUp className="h-4 w-4" />
@@ -386,13 +326,17 @@ function AdviceGroupPage() {
                                             <Button variant="ghost" size="sm" className="flex items-center gap-1">
 
                                                 <MessageSquare className="h-4 w-4" />
-                                                <span>1</span>
+                                                <span>{item.comments}</span>
                                             </Button>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${adviceGroup.link}/d/${item._id}`, "_blank")}>
+                                            <Link
+                                                href={`/saran/board/${item.link}/d/${item._id}`}
+                                                target="_blank"
+                                                className="text-primary inline-flex items-center hover:underline"
+                                            >
                                                 View <ArrowRight className="ml-1 h-4 w-4" />
-                                            </Button>
+                                            </Link>
                                             <Button variant="link" size="sm" className="text-red-500" onClick={() => setDeleteId(item._id)}>
                                                 Delete <Trash2 className="ml-1 h-4 w-4" />
                                             </Button>
@@ -411,18 +355,6 @@ function AdviceGroupPage() {
                 description="Apakah Anda yakin ingin menghapus data ini? Semua komentar dan vote yang terkait juga akan dihapus."
                 onConfirm={handleDeleteAdvice}
                 onCancel={() => setDeleteId(null)}
-                confirmLabel="Delete"
-                cancelLabel="Cancel"
-                confirmClass="bg-red-500"
-            />
-
-            <DeletePopup
-                open={!!deleteGroupId}
-                onOpenChange={(open) => !open && setDeleteGroupId(null)}
-                title={`Konfirmasi Menghapus ${adviceGroup?.name}`}
-                description="Apakah Anda yakin ingin menghapus data ini? Semua saran yang terkait juga akan dihapus."
-                onConfirm={handleDeleteGroup}
-                onCancel={() => setDeleteGroupId(null)}
                 confirmLabel="Delete"
                 cancelLabel="Cancel"
                 confirmClass="bg-red-500"

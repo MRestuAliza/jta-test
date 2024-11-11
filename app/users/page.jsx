@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ListFilter, MoreHorizontal, UserPen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import {
 
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -36,17 +35,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Sidebar from "@/components/General/Sidebar";
 import Header from "@/components/General/Header";
 import { useSession } from "next-auth/react";
-import withAuth from '@/libs/withAuth';
+import withAuth from "@/libs/withAuth";
 import {
   Dialog,
   DialogContent,
@@ -57,91 +51,58 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatDate } from '@/libs/dateUtils';
-
-function DialogDemo({ isOpen, onClose, user }) {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
-          <DialogDescription>
-            Make changes to your profile here. Click save when you're done.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input
-              id="name"
-              defaultValue={user?.name || ''}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="username" className="text-right">
-              Select Role
-            </Label>
-            <Select>
-              <SelectTrigger id="status" aria-label="Select status" className="w-full h-full col-span-3">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Super admin</SelectItem>
-                <SelectItem value="published">Admin Fakultas</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="submit">Save changes</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { formatDate } from "@/libs/dateUtils";
+import Swal from "sweetalert2";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 function Page() {
   const { status, data: session } = useSession();
   const [users, setUsers] = useState([]);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
       fetchUsers();
     }
-  }, [status, session, refreshKey]);
+  }, [status, session]);
 
   const fetchUsers = async () => {
     try {
       if (session?.user?.role) {
-        const response = await fetch('/api/auth/users', {
+        const response = await fetch("/api/auth/users", {
           headers: {
-            'X-User-Role': session.user.role
-          }
+            "X-User-Role": session.user.role,
+          },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch users');
+          throw new Error("Failed to fetch users");
         }
 
         const data = await response.json();
         setUsers(data);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error("Error fetching users:", error);
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    if (roleFilter === 'Admin') {
-      return user.role.includes('Admin') && user.role !== 'Super Admin';
+  const filteredUsers = users.filter((user) => {
+    if (roleFilter === "Admin") {
+      return user.role.includes("Admin") && user.role !== "Super Admin";
     } else {
       return user.role.includes(roleFilter);
     }
@@ -157,6 +118,42 @@ function Page() {
     setSelectedUser(null);
   };
 
+  const handleDelete = async () => {
+    try {
+      const response = await fetch(`/api/auth/users?userId=${deleteId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "User deleted successfully",
+          timer: 1000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        }).then(() => {
+          window.location.reload();
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to delete user",
+          text: "Please try again later",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while deleting the user.",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteId(null);
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar />
@@ -167,11 +164,8 @@ function Page() {
             <div className="flex items-center">
               <TabsList>
                 <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="active">Active</TabsTrigger>
-                <TabsTrigger value="draft">Draft</TabsTrigger>
-                <TabsTrigger value="archived" className="hidden sm:flex">
-                  Archived
-                </TabsTrigger>
+                <TabsTrigger value="active">Admin</TabsTrigger>
+                <TabsTrigger value="draft">Mahasiswa</TabsTrigger>
               </TabsList>
               <div className="ml-auto flex items-center gap-2">
                 <DropdownMenu>
@@ -186,25 +180,15 @@ function Page() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Filter by</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked>
-                      Active
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>Draft</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Archived
-                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuItem>All</DropdownMenuItem>
+                    <DropdownMenuItem>Admin</DropdownMenuItem>
+                    <DropdownMenuItem>Mahasiswa</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" className="h-8 gap-1">
-                  <UserPen className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Edit role
-                  </span>
-                </Button>
               </div>
             </div>
             <TabsContent value="all">
-              <Card x-chunk="dashboard-06-chunk-0">
+              <Card>
                 <CardHeader>
                   <CardTitle>List Users</CardTitle>
                 </CardHeader>
@@ -234,13 +218,33 @@ function Page() {
 
                     <TableBody>
                       {filteredUsers.map((user) => (
-                        <TableRow key={user.id}>
+                        <TableRow key={user._id}>
                           <TableCell className="hidden sm:table-cell">
                             {user.profilePicture ? (
-                              <Image className="h-10 w-10 rounded-full" width={500} height={500} src={user.profilePicture} alt="Avatar Tailwind CSS Component" />
+                              <Image
+                                className="h-10 w-10 rounded-full"
+                                width={500}
+                                height={500}
+                                src={user.profilePicture}
+                                alt="Avatar"
+                              />
                             ) : (
-                              <svg className="w-10  h-10 text-gray-800 dark:text-white" ariaHidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                              <svg
+                                className="w-10 h-10 text-gray-800 dark:text-white"
+                                ariaHidden="true"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke="currentColor"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.948 8.948 0 0 0 12 21Zm3-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                                />
                               </svg>
                             )}
                           </TableCell>
@@ -251,7 +255,7 @@ function Page() {
                             <Badge variant="outline">{user.role}</Badge>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {user.nim ? user.nim : '-'}
+                            {user.nim ? user.nim : "-"}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {user.email}
@@ -273,8 +277,19 @@ function Page() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleDialogOpen(user)}>Edit</DropdownMenuItem>
-                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDialogOpen(user)}
+                                >
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeleteId(user._id);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -294,9 +309,166 @@ function Page() {
           </Tabs>
         </main>
       </div>
-      <DialogDemo isOpen={isDialogOpen} onClose={handleDialogClose} user={selectedUser} />
+      <DialogDemo
+        isOpen={isDialogOpen}
+        onClose={handleDialogClose}
+        user={selectedUser}
+      />
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => !open && setIsDeleteDialogOpen(false)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Konfirmasi Menghapus{" "}
+              {users.find((user) => user._id === deleteId)?.name}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus data ini? Semua data terkait
+              akan dihapus secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 export default withAuth(Page);
+
+
+function DialogDemo({ isOpen, onClose, user }) {
+  const [selectedRole, setSelectedRole] = useState(user?.role || "");
+  const [departments, setDepartments] = useState([]);
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchDepartments();
+    }
+  }, []);
+
+  console.log("v", departments);
+
+  const onRoleChange = (value) => {
+    setSelectedRole(value);
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch("/api/departments");
+
+      if (response.ok) {
+        const data = await response.json();
+        setDepartments(data.data);
+      } else {
+        throw new Error("Failed to fetch departments");
+      }
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+    }
+  }
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`/api/auth/users?userId=${user._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newRole: selectedRole })
+      });
+
+      if (response.ok) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Sukses',
+          text: 'Sukses Menambahkan Data',
+          timer: 1000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        })
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to update role",
+          text: "Please try again later",
+          timer: 1000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating role:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to update role",
+        text: "An error occurred while updating the role.",
+        timer: 1000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Edit Profile</DialogTitle>
+          <DialogDescription>
+            Buat perubahan pada profil user di sini. Klik simpan setelah Anda selesai
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Name
+            </Label>
+            <Input
+              id="name"
+              defaultValue={user?.name || ""}
+              className="col-span-3"
+              disabled
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="role" className="text-right">
+              Pilih Role
+            </Label>
+            <Select onValueChange={onRoleChange} value={selectedRole}>
+              <SelectTrigger
+                id="role"
+                aria-label="Select role"
+                className="w-full h-full col-span-3"
+              >
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Super Admin">Super Admin</SelectItem>
+                <SelectItem value="Mahasiswa">Mahasiswa</SelectItem>
+                {departments.map((department) => (
+                  <SelectItem key={department.id} value={`Admin ${department.name}`}>
+                    Admin {department.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" onClick={handleSave}>
+            Simpan Perubahan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

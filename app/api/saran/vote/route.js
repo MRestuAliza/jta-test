@@ -1,119 +1,61 @@
 import { connectMongoDB } from "@/libs/mongodb";
-import Vote from '@/models/voteSchema';
-import Saran from '@/models/saranSchema';
-import mongoose from "mongoose";
-import GroupSaran from '@/models/groupSaranSchema';
-
+import Saran from '@/models/tes/saranSchema';
 
 export async function GET(req) {
     await connectMongoDB();
     const url = new URL(req.url);
-    const link = url.searchParams.get('link');
-    const userId = url.searchParams.get('userId');  // Dapatkan userId dari query params
+    const saranId = url.searchParams.get("saranId");
+    const userId = url.searchParams.get("userId");
 
     try {
-        let groupSaran = await GroupSaran.findOne({ link: link })
-        if (!groupSaran) {
-            return new Response(JSON.stringify({
-                success: false,
-                message: "Group Saran tidak ditemukan",
-                data: null
-            }), {
-                status: 404,
-            });
+        const saran = await Saran.findById(saranId);
+        if (!saran) {
+            return new Response(JSON.stringify({ message: "Saran not found" }), { status: 404 });
         }
 
-        const saranList = await Saran.find({ groupSaranId: groupSaran._id }).populate('created_by', 'name profilePicture');
-
-        // Ambil semua vote yang diberikan oleh user terkait dengan saran dalam group ini
-        const userVotes = await Vote.find({ userId: userId, saranId: { $in: saranList.map(saran => saran._id) } });
-
-        // Mapping userVotes menjadi object dengan key saranId dan value tipe vote (upvote/downvote)
-        const userVotesMap = userVotes.reduce((map, vote) => {
-            map[vote.saranId] = vote.voteType;
-            return map;
-        }, {});
-
-        return new Response(JSON.stringify({
-            success: true,
-            data: {
-                saranList: saranList,
-                userVotes: userVotesMap // Kembalikan status vote user
-            }
-        }), {
+        const userVote = saran.votes.find(vote => vote.userId === userId)?.voteType || 0;
+        return new Response(JSON.stringify({ voteScore: saran.voteScore, userVote }), {
             status: 200,
+            headers: { 'Content-Type': 'application/json' },
         });
     } catch (error) {
-        console.error('Error:', error);
-        return new Response(JSON.stringify({ success: false, error: error.message }), {
+        return new Response(JSON.stringify({ success: false, message: error.message }), {
             status: 500,
+            headers: { 'Content-Type': 'application/json' },
         });
     }
 }
+
 
 export async function PATCH(req) {
     await connectMongoDB();
-    const { searchParams } = new URL(req.url);
-    const saranId = searchParams.get("saranId");
-    const body = await req.json();
-    const { userId, voteType } = body;
-
-    if (!mongoose.Types.ObjectId.isValid(saranId)) {
-        return new Response(
-            JSON.stringify({ success: false, message: "Invalid ID format" }),
-            { status: 400 }
-        );
-    }
-
+    const { saranId, userId, voteType } = await req.json();
     try {
-        const existingVote = await Vote.findOne({ saranId: saranId, userId: userId });
-        let voteChange = 0;
+        const saran = await Saran.findById(saranId);
+        const existingVoteIndex = saran.votes.findIndex(vote => vote.userId === userId);
 
-        if (existingVote) {
-            if (existingVote.voteType === voteType) {
-                // Jika voteType sama, hapus vote untuk mengembalikan ke keadaan semula
-                await Vote.deleteOne({ _id: existingVote._id });
-                voteChange = voteType === 'upvote' ? -1 : 1;
+        if (existingVoteIndex > -1) {
+            if (saran.votes[existingVoteIndex].voteType === voteType) {
+                saran.voteScore -= voteType;
+                saran.votes.splice(existingVoteIndex, 1);
             } else {
-                // Jika voteType berbeda, perbarui voteType
-                voteChange = voteType === 'upvote' ? 1 : -1;
-                existingVote.voteType = voteType;
-                await existingVote.save();
+                saran.voteScore += 2 * voteType;
+                saran.votes[existingVoteIndex].voteType = voteType;
             }
         } else {
-            // Jika belum ada vote, tambahkan vote baru
-            const newVote = new Vote({
-                saranId: saranId,
-                userId: userId,
-                voteType: voteType,
-            });
-
-            voteChange = voteType === 'upvote' ? 1 : -1; 
-            await newVote.save();
+            saran.votes.push({ userId, voteType });
+            saran.voteScore += voteType;
         }
 
-        const updatedSaran = await Saran.findByIdAndUpdate(
-            saranId,
-            { $inc: { voteScore: voteChange } },
-            { new: true }
-        );
-
-        if (!updatedSaran) {
-            return new Response(
-                JSON.stringify({ success: false, message: "Saran not found" }),
-                { status: 404 }
-            );
-        }
-
-        return new Response(
-            JSON.stringify({ success: true, data: updatedSaran }),
-            { status: 200 }
-        );
+        await saran.save();
+        return new Response(JSON.stringify({ success: true, voteScore: saran.voteScore, userVote: voteType }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
     } catch (error) {
-        return new Response(
-            JSON.stringify({ message: "Internal Server Error", error: error.message }),
-            { status: 500 }
-        );
+        return new Response(JSON.stringify({ success: false, message: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 }
-

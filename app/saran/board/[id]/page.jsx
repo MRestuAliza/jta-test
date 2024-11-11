@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Sidebar from '@/components/General/Sidebar';
+import Link from 'next/link';
 import Header from "@/components/General/Header";
 import { ChevronDown, ArrowRight, Trash2, ChevronUp, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -20,31 +21,42 @@ import withAuth from '@/libs/withAuth';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"
 import Swal from 'sweetalert2';
+import { debounce } from 'lodash';
 import NotFound from '@/app/not-found';
 
 
 function AdviceGroupPage() {
-    const { id: groupSaranId } = useParams();
+    const { id } = useParams();
     const { status, data: session } = useSession();
+    const [emailList, setEmailList] = useState([]);
     const [formWeb, setFormWeb] = useState({
         title: '',
         description: '',
-        usserId: ''
+        usserId: '',
+        adminEmails: []
     });
     const [advicesGroup, setAdvicesGroup] = useState([]);
     const [advice, setAdvice] = useState([]);
     const [notFound, setNotFound] = useState(false);
     const [userVotes, setUserVotes] = useState({});
     const params = useParams();
+
     const [isLoading, setIsLoading] = useState(true);
-    
+
 
     useEffect(() => {
         if (status === "authenticated") {
             fetchAdvice();
             fetchAdviceGroup();
+            fetchEmailList()
         }
-    }, [status, groupSaranId]);
+    }, [status]);
+
+    useEffect(() => {
+        if (advice.length > 0) {
+            fetchUserVotes();
+        }
+    }, [advice]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -54,7 +66,7 @@ function AdviceGroupPage() {
     const fetchAdviceGroup = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/group-saran/${params.id}`);
+            const response = await fetch(`/api/group-saran?id=${params.id}`);
             if (!response.ok) {
                 setNotFound(true);
                 throw new Error('Network response was not ok');
@@ -63,35 +75,78 @@ function AdviceGroupPage() {
             setAdvicesGroup(data.data);
         } catch (error) {
             console.error('Failed to fetch advice:', error);
-            setNotFound(true); // Update notFound state jika ada error
+            setNotFound(true);
         } finally {
-            setIsLoading(false); // Pastikan isLoading diubah ke false di sini
+            setIsLoading(false);
         }
     };
-    
+
     const fetchAdvice = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/saran/vote?link=${groupSaranId}&userId=${session.user.id}`);
+            const response = await fetch(`/api/saran?link=${id}`);
             if (!response.ok) {
                 throw new Error('Data tidak ditemukan');
             }
             const data = await response.json();
+            console.log('Data advice:', data);
+
             if (!data || !data.data || data.data.length === 0) {
                 setNotFound(true);
             } else {
-                setAdvice(data.data.saranList);
-                setUserVotes(data.data.userVotes);
+                const adviceArray = Object.values(data.data);
+
+                setAdvice(adviceArray);
                 setNotFound(false);
             }
         } catch (error) {
             console.error(error);
             setNotFound(true);
         } finally {
-            setIsLoading(false); // Pastikan isLoading diubah ke false di sini
+            setIsLoading(false);
         }
     };
-    
+
+    console.log('advice:', emailList);
+
+
+    const fetchEmailList = async () => {
+        try {
+            const response = await fetch(`/api/getEmail?link=${id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setEmailList(data.data);
+            } else {
+                console.error('Failed to fetch email list');
+            }
+        } catch (error) {
+            console.error('Error fetching email list:', error);
+        }
+    }
+
+    const fetchUserVotes = async () => {
+        try {
+            const userId = session.user.id;
+            const votesData = {};
+
+            for (const item of advice) {
+                const response = await fetch(`/api/saran/vote?saranId=${item._id}&userId=${userId}`);
+                if (response.ok) {
+                    const { userVote } = await response.json();
+                    votesData[item._id] = userVote;
+                } else if (response.status === 404) {
+                    console.warn(`Data not found for saranId ${item._id}`);
+                    votesData[item._id] = 0;  // Nilai default jika tidak ditemukan
+                } else {
+                    console.error("Failed to fetch vote status");
+                }
+            }
+            setUserVotes(votesData);
+        } catch (error) {
+            console.error("Error fetching user votes:", error);
+        }
+    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -100,18 +155,20 @@ function AdviceGroupPage() {
         console.log('Form data yang dikirim:', {
             title: formWeb.title,
             description: formWeb.description,
-            userId: userId // Masukkan userId di sini
+            userId: userId,
+            adminEmails: emailList
         });
 
         try {
-            const response = await fetch(`/api/saran?link=${groupSaranId}`, {
+            const response = await fetch(`/api/saran?link=${id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     ...formWeb,
-                    userId
+                    userId,
+                    adminEmails: emailList
                 })
             });
 
@@ -149,7 +206,8 @@ function AdviceGroupPage() {
         }
     };
 
-    const handleVote = async (saranId, voteType) => {
+    const handleVote = debounce(async (saranId, type) => {
+        const voteType = type === 'upvote' ? 1 : -1;
         try {
             if (!session || !session.user || !session.user.id) {
                 throw new Error('Anda harus login terlebih dahulu');
@@ -157,23 +215,27 @@ function AdviceGroupPage() {
 
             const userId = session.user.id;
 
-            const response = await fetch(`/api/saran/vote?saranId=${saranId}`, {
+            const response = await fetch(`/api/saran/vote`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, voteType })
+                body: JSON.stringify({ saranId, userId, voteType })
             });
 
             if (response.ok) {
-                const updatedSaran = await response.json();
+                const { success, voteScore, userVote } = await response.json();
 
-                if (updatedSaran && updatedSaran.data && typeof updatedSaran.data.voteScore !== 'undefined') {
-                    setAdvice(prev => prev.map(item => item._id === saranId ? { ...item, voteScore: updatedSaran.data.voteScore } : item));
+                if (success && typeof voteScore !== 'undefined') {
+                    setAdvice(prev =>
+                        prev.map(item =>
+                            item._id === saranId ? { ...item, voteScore } : item
+                        )
+                    );
                     setUserVotes(prev => ({
                         ...prev,
-                        [saranId]: voteType
+                        [saranId]: userVote
                     }));
                 } else {
-                    console.error("Vote data not found or invalid response");
+                    console.error("Invalid response data");
                 }
             } else {
                 console.error('Failed to update vote');
@@ -181,7 +243,12 @@ function AdviceGroupPage() {
         } catch (error) {
             console.error('Error while voting:', error);
         }
-    };
+    }, 500);
+
+
+    console.log("asd",advice);
+    
+
 
     if (isLoading) {
         return (
@@ -260,14 +327,27 @@ function AdviceGroupPage() {
                                                 <CardDescription className="text-muted-foreground">{item.description}</CardDescription>
                                             </div>
                                             <div className="flex items-center text-black rounded-lg p-2">
-                                                <Button variant="ghost" className="p-1 " onClick={() => handleVote(item._id, 'upvote')}>
-                                                    <ChevronUp className={`h-6 w-6 ${userVotes[item._id] === 'upvote' ? ' bg-[#10172A] rounded-sm text-white' : ''}`} />
+                                                <Button
+                                                    variant="ghost"
+                                                    className="p-1"
+                                                    onClick={() => handleVote(item._id, 'upvote')}
+                                                >
+                                                    <ChevronUp
+                                                        className={`h-6 w-6 ${userVotes[item._id] === 1 ? ' bg-[#10172A] rounded-sm text-white' : ''
+                                                            }`}
+                                                    />
                                                 </Button>
                                                 <span>{item.voteScore}</span>
-                                                <Button variant="ghost" className="p-1" onClick={() => handleVote(item._id, 'downvote')}>
-                                                    <ChevronDown className={`h-6 w-6 ${userVotes[item._id] === 'downvote' ? 'bg-[#10172A] rounded-sm text-white' : ''}`} />
+                                                <Button
+                                                    variant="ghost"
+                                                    className="p-1"
+                                                    onClick={() => handleVote(item._id, 'downvote')}
+                                                >
+                                                    <ChevronDown
+                                                        className={`h-6 w-6 ${userVotes[item._id] === -1 ? 'bg-[#10172A] rounded-sm text-white' : ''
+                                                            }`}
+                                                    />
                                                 </Button>
-
                                             </div>
 
                                         </div>
@@ -275,25 +355,24 @@ function AdviceGroupPage() {
                                     <CardFooter className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-2">
-                                                <img
-                                                    src={item.created_by.profilePicture}
-                                                    alt={item.created_by.name}
-                                                    className="w-8 h-8 rounded-full"
-                                                />
-                                                <span>{item.created_by?.name}</span>
+                                                <span>{item.created_by}</span>
                                             </div>
                                             <MessageSquare className="h-4 w-4" />
-                                            <span>3</span>
+                                            <span>{item.comments}</span>
                                         </div>
 
                                         <div className="flex text-primary items-center gap-2">
-                                            <span className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "done" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}>
+                                            <span className={`${item.status === "new" ? "text-gray-500" : ""} ${item.status === "work in progress" ? "text-blue-400" : ""} ${item.status === "completed" ? "text-green-500" : ""} ${item.status === "cancelled" ? "text-red-500" : ""}`}>
                                                 {item.status}
                                             </span>
 
-                                            <Button variant="link" size="sm" className="text-primary" onClick={() => window.open(`/saran/board/${item.link}/d/${item._id}`, "_blank")}>
+                                            <Link
+                                                href={`/saran/board/${item.link}/d/${item._id}`}
+                                                target="_blank"
+                                                className="text-primary inline-flex items-center hover:underline"
+                                            >
                                                 View <ArrowRight className="ml-1 h-4 w-4" />
-                                            </Button>
+                                            </Link>
                                         </div>
                                     </CardFooter>
                                 </Card>

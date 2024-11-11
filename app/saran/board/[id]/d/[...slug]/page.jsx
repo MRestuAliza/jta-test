@@ -10,112 +10,118 @@ import { Textarea } from "@/components/ui/textarea";
 import withAuth from '@/libs/withAuth';
 import { useParams } from 'next/navigation';
 import { useSession } from "next-auth/react";
-import NotFound from '@/app/not-found';
 import Swal from 'sweetalert2';
+import { debounce } from 'lodash';
 
 function DetailPage() {
-  const [replayComment, setCommentsReplay] = useState(false);
-  const [showReplyForm, setShowReplyForm] = useState({});  // Simpan state per comment ID
-  const [replyContent, setReplyContent] = useState("");
+  // State declarations
+  const [showReplyForm, setShowReplyForm] = useState({});
+  const [replyContents, setReplyContents] = useState({});
   const [commentContent, setCommentContent] = useState({
     content: "",
     saran_id: ""
   });
   const [detailAdvice, setDetailAdvice] = useState([]);
-  const params = useParams();
-  const slug = params.slug || [];
-  const [userVotes, setUserVotes] = useState({});
-  const { status, data: session } = useSession();
   const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [comments, setComments] = useState([]);
-  const [replies, setReplies] = useState({});
+  const [userVotes, setUserVotes] = useState({});
 
+  const params = useParams();
+  const slug = params.slug || [];
+  const { status, data: session } = useSession();
+
+  // Effects
   useEffect(() => {
     if (status === "authenticated") {
       fetchDetail();
+      fetchComments();
+      fetchUserVotes();
     }
   }, [status]);
 
+  useEffect(() => {
+    if (comments.length > 0) {
+      fetchUserVotes();
+    }
+  }, [comments]);
+
+  // Toggle reply form visibility
   const toggleReplyForm = (commentId) => {
     setShowReplyForm(prevState => ({
       ...prevState,
       [commentId]: !prevState[commentId],
     }));
-
-    if (!replies[commentId]) {
-      fetchReply(commentId);
-    }
   };
 
+  // Handle reply input changes
+  const handleReplyChange = (commentId, value) => {
+    setReplyContents(prev => ({
+      ...prev,
+      [commentId]: value
+    }));
+  };
+
+  // Handle reply submission
   const handleReplySubmit = async (e, commentId) => {
     e.preventDefault();
-    console.log("Reply content:", replyContent);
+    const userId = session.user.id;
 
     try {
-      const response = await fetch(`/api/saran/comment/${commentId}`, {
+      const content = replyContents[commentId] || '';
+
+      const response = await fetch(`/api/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          content: replyContent,
-          userId: session.user.id,
+          content: content,
+          saran_id: slug[0],
+          ref_comment_id: commentId,
+          created_by: userId
         }),
       });
 
       if (response.ok) {
-        const result = await response.json();
-
         Swal.fire({
           icon: 'success',
-          title: 'Balasan berhasil dikirim',
+          title: 'Sukses',
+          text: 'Balasan berhasil dikirim',
           timer: 1000,
           timerProgressBar: true,
           showConfirmButton: false,
         });
 
-        setReplyContent("");
-        setComments(prevComments =>
-          prevComments.map(comment =>
-            comment._id === commentId
-              ? {
-                ...comment,
-                replyIds: Array.isArray(comment.replyIds)
-                  ? [...comment.replyIds, result.data]
-                  : [result.data]
-              }
-              : comment
-          )
-        );
+        setReplyContents(prev => ({
+          ...prev,
+          [commentId]: ''
+        }));
 
-        // Sembunyikan form balasan
-        toggleReplyForm(commentId);
-
+        fetchComments();
       } else {
-        console.error("Error submitting reply");
+        alert("Error submitting reply");
       }
     } catch (error) {
       console.error("Error:", error);
     }
   };
 
+  // Handle main comment submission
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     const userId = session.user.id;
-    const data = {
-      content: commentContent.content,
-      saran_id: userId
-    };
 
     try {
-      const response = await fetch(`/api/saran/comment?saran_id=${slug[0]}`, {
+      const response = await fetch(`/api/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...data, userId
+          content: commentContent.content,
+          saran_id: slug[0],
+          created_by: userId
         }),
       });
 
@@ -127,44 +133,27 @@ function DetailPage() {
           timer: 1000,
           timerProgressBar: true,
           showConfirmButton: false,
-        }).then(() => {
-          window.location.reload();
         });
+        setCommentContent({ content: "", saran_id: slug[0] });
+        fetchComments();
       } else {
-        alert("Error submitting form");
+        alert("Error submitting comment");
       }
-
     } catch (error) {
       console.error("Error:", error);
     }
   };
 
-  const handleChangeContent = (e) => {
-    const { name, value } = e.target;
-    setCommentContent((prev) => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
+  // Fetch detail data
   const fetchDetail = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/saran/vote/d?saranId=${slug[0]}&userId=${session.user.id}`);
-
+      const response = await fetch(`/api/saran?sid=${slug[0]}`);
       if (!response.ok) {
-        if (response.status === 404) {
-          setNotFound(true);
-        }
         throw new Error("Failed to fetch detail");
       }
-
       const data = await response.json();
-      setDetailAdvice(data.data.saran);
-      setUserVotes({
-        [data.data.saran._id]: data.data.userVote
-      });
-      fetchComments();
+      setDetailAdvice(data.data);
     } catch (error) {
       console.error("Error fetching detail:", error);
       setNotFound(true);
@@ -173,99 +162,90 @@ function DetailPage() {
     }
   };
 
+  // Fetch comments
   const fetchComments = async () => {
-    const response = await fetch(`/api/saran/comment?saran_id=${slug[0]}`);
-
     try {
-      if (!response.ok) {
-        if (response.status === 404) {
-          setNotFound(true);
-        }
-        throw new Error("Failed to fetch detail");
+      const response = await fetch(`/api/comments?saran_id=${slug[0]}`);
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data.data);
+      } else {
+        console.error("Failed to fetch comments");
       }
-      const data = await response.json();
-      setComments(Array.isArray(data.data) ? data.data : []);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error("Error fetching comments:", error);
     }
   };
 
-  const fetchReply = async (commentId) => {
-    const response = await fetch(`/api/saran/comment/${commentId}`);
-
+  // Fetch user votes
+  const fetchUserVotes = async () => {
     try {
-      if (!response.ok) {
-        if (response.status === 404) {
-          setNotFound(true);
+      const userId = session.user.id;
+      const votesData = {};
+
+      for (const item of comments) {
+        const response = await fetch(`/api/saran/vote/comments?commentsId=${item._id}&userId=${userId}`);
+        if (response.ok) {
+          const { userVote } = await response.json();
+          votesData[item._id] = userVote;
+        } else if (response.status === 404) {
+          console.warn(`Data not found for saranId ${item._id}`);
+          votesData[item._id] = 0;
         }
-        throw new Error("Failed to fetch detail");
       }
-      const data = await response.json();
-      setCommentsReplay(Array.isArray(data.data) ? data.data : []);
-      setReplies(prevReplies => ({
-        ...prevReplies,
-        [commentId]: Array.isArray(data.data) ? data.data : [] // Simpan balasan dalam bentuk array
-      }));
+      setUserVotes(votesData);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error("Error fetching user votes:", error);
     }
-  }
+  };
 
-  const handleVote = async (saranId, voteType) => {
+  // Handle voting
+  const handleVote = debounce(async (commentsId, type) => {
+    const voteType = type === "upvote" ? 1 : -1;
     try {
-      if (!session || !session.user || !session.user.id) {
+      if (!session?.user?.id) {
         throw new Error('Anda harus login terlebih dahulu');
       }
 
-      const userId = session.user.id;
-
-      const response = await fetch(`/api/saran/vote?saranId=${saranId}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/saran/vote/comments`, {
+        method: "PATCH",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, voteType })
+        body: JSON.stringify({
+          commentsId,
+          userId: session.user.id,
+          voteType
+        })
       });
 
       if (response.ok) {
-        const updatedSaran = await response.json();
-
-        if (updatedSaran && updatedSaran.data && typeof updatedSaran.data.voteScore !== 'undefined') {
-          setDetailAdvice(prev => ({
-            ...prev,
-            voteScore: updatedSaran.data.voteScore
-          }));
-
+        const { success, voteScore, userVote } = await response.json();
+        if (success && typeof voteScore !== 'undefined') {
+          setComments(prev =>
+            prev.map(item =>
+              item._id === commentsId ? { ...item, voteScore } : item
+            )
+          );
           setUserVotes(prev => ({
             ...prev,
-            [saranId]: voteType
+            [commentsId]: userVote
           }));
-        } else {
-          console.error("Vote data not found or invalid response");
         }
-      } else {
-        console.error('Failed to update vote');
       }
     } catch (error) {
       console.error('Error while voting:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message,
+        timer: 2000
+      });
     }
-  };
+  }, 500);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full border-4 border-gray-300 border-t-gray-900 h-12 w-12" />
-          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  console.log('Replies:', comments);
   if (notFound) {
-    return (
-      <><NotFound /></>
-    );
+    return <NotFound />;
   }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -273,34 +253,25 @@ function DetailPage() {
       <div className='flex flex-col sm:gap-4 sm:py-4 sm:pl-14'>
         <Header BreadcrumbLinkTitle={"Departments"} />
         <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0">
-
           <Card className="w-full">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="font-bold text-lg">{detailAdvice.title}</CardTitle>
-                  <CardDescription className="text-muted-foreground">{detailAdvice.description}</CardDescription>
-                </div>
-                <div className="flex items-center text-black rounded-lg p-2">
-                  <Button variant="ghost" className="p-1" onClick={() => handleVote(detailAdvice._id, 'upvote')}>
-                    <ChevronUp className={`h-6 w-6 ${userVotes[detailAdvice._id] === 'upvote' ? ' bg-[#10172A] rounded-sm text-white' : ''}`} />
-                  </Button>
-                  <span>{detailAdvice.voteScore}</span>
-                  <Button variant="ghost" className="p-1" onClick={() => handleVote(detailAdvice._id, 'downvote')}>
-                    <ChevronDown className={`h-6 w-6 ${userVotes[detailAdvice._id] === 'downvote' ? ' bg-[#10172A] rounded-sm text-white' : ''}`} />
-                  </Button>
+                  <CardDescription className="text-muted-foreground">
+                    {detailAdvice.description}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardFooter className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                <span>12 </span>
+                <span>{comments.length}</span>
               </div>
             </CardFooter>
           </Card>
 
-          {/* Form untuk menambahkan komentar pertama kali */}
           <div className="w-full mt-6">
             <Card>
               <form onSubmit={handleCommentSubmit}>
@@ -313,148 +284,184 @@ function DetailPage() {
                       required
                       value={commentContent.content}
                       name="content"
-                      onChange={handleChangeContent}
+                      onChange={(e) => setCommentContent({
+                        ...commentContent,
+                        content: e.target.value
+                      })}
                       placeholder="Tulis komentar Anda di sini..."
                       className="min-h-24"
                     />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" type="submit">Kirim Komentar</Button>
+                  <Button className="w-full" type="submit">
+                    Kirim Komentar
+                  </Button>
                 </CardFooter>
               </form>
             </Card>
           </div>
 
-          {/* Komentar Utama */}
           <div className="w-full mt-6 space-y-4">
             {Array.isArray(comments) && comments.length > 0 ? (
-              comments.map((comment, index) => (
-                <div key={comment._id || index}> {/* Pastikan key unik untuk setiap komentar */}
-                  <Card className="">
+              comments.map((comment) => (
+                <div key={comment._id}>
+                  <Card>
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center">
-                            {comment.created_by?.profilePicture ? (
+                            {comment.created_by?.profile_picture ? (
                               <img
-                                src={comment.created_by.profilePicture}
-                                alt={comment.created_by?.name || "User profile"}
-                                className="w-full h-full rounded-full object-cover" />
+                                src={comment.created_by.profile_picture}
+                                alt={comment.created_by?.name}
+                                className="w-full h-full rounded-full object-cover"
+                              />
                             ) : (
                               <span className="text-white font-bold">
-                                {comment.created_by?.name ? comment.created_by.name[0].toUpperCase() : "D"}
+                                {comment.created_by?.name ?
+                                  comment.created_by.name[0] : "U"}
                               </span>
                             )}
                           </div>
-
                           <div>
                             <CardTitle className="font-bold text-sm">
-                              {comment.created_by?.name || "Nama Pengguna"}
+                              {comment.created_by?.name}
                             </CardTitle>
                             <CardDescription className="text-muted-foreground text-sm">
-                              {comment.content || "Ini adalah isi komentar dari pengguna."}
+                              {comment.content}
                             </CardDescription>
                           </div>
                         </div>
+
                         <div className="flex items-center text-black rounded-lg p-2">
-                          <Button variant="ghost" className="p-1">
-                            <ChevronUp className="h-5 w-5" />
+                          <Button
+                            variant="ghost"
+                            className="p-1"
+                            onClick={() => handleVote(comment._id, 'upvote')}
+                          >
+                            <ChevronUp
+                              className={`h-6 w-6 ${userVotes[comment._id] === 1 ?
+                                'bg-[#10172A] rounded-sm text-white' : ''
+                                }`}
+                            />
                           </Button>
-                          <span className="text-sm">{comment.voteScore || 0}</span>
-                          <Button variant="ghost" className="p-1">
-                            <ChevronDown className="h-5 w-5" />
+                          <span>{comment.voteScore}</span>
+                          <Button
+                            variant="ghost"
+                            className="p-1"
+                            onClick={() => handleVote(comment._id, 'downvote')}
+                          >
+                            <ChevronDown
+                              className={`h-6 w-6 ${userVotes[comment._id] === -1 ?
+                                'bg-[#10172A] rounded-sm text-white' : ''
+                                }`}
+                            />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
                     <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
-                      <span>{new Date(comment.created_at).toLocaleDateString()}</span> {/* Format tanggal */}
+                      <span>
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </span>
                       <Button
                         variant="link"
                         className="text-xs"
                         onClick={() => toggleReplyForm(comment._id)}
                       >
-                        {showReplyForm[comment._id] ? "Sembunyikan Balasan" : "Balas"}
+                        {showReplyForm[comment._id] ?
+                          "Sembunyikan Balasan" : "Balas"}
                       </Button>
                     </CardFooter>
                   </Card>
 
-                  {/* Form balasan hanya ditampilkan jika `showReplyForm` cocok dengan komentar yang sedang ditampilkan */}
                   {showReplyForm[comment._id] && (
                     <div className="ml-10 mt-3">
                       <Card>
                         <form onSubmit={(e) => handleReplySubmit(e, comment._id)}>
                           <CardHeader>
-                            <CardTitle className="text-sm">Balas Komentar</CardTitle>
+                            <CardTitle className="text-sm">
+                              Balas Komentar
+                            </CardTitle>
                           </CardHeader>
                           <CardContent>
                             <Textarea
                               required
-                              id="reply"
+                              id={`reply-${comment._id}`}
                               name="reply"
-                              value={replyContent}
-                              onChange={(e) => setReplyContent(e.target.value)}
+                              value={replyContents[comment._id] || ''}
+                              onChange={(e) =>
+                                handleReplyChange(comment._id, e.target.value)
+                              }
                               placeholder="Tulis balasan Anda..."
                               className="min-h-24"
                             />
                           </CardContent>
                           <CardFooter>
-                            <Button type="submit" className="w-full">Kirim Balasan</Button>
+                            <Button type="submit" className="w-full">
+                              Kirim Balasan
+                            </Button>
                           </CardFooter>
                         </form>
                       </Card>
 
-                      {/* Tampilkan balasan jika ada */}
-                      <div className='space-y-4 mt-3'>
-                        {Array.isArray(replies[comment._id]) && replies[comment._id].length > 0 && (
-                          replies[comment._id].map((reply) => (
-                            <Card key={reply._id}>
-                              <CardHeader className="pb-3">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center">
-                                      {reply.created_by?.profilePicture ? (
-                                        <img
-                                          src={reply.created_by.profilePicture}
-                                          alt={reply.created_by?.name || "User profile"}
-                                          className="w-full h-full rounded-full object-cover"
-                                        />
-                                      ) : (
-                                        <span className="text-white font-bold">
-                                          {reply.created_by?.name ? reply.created_by.name[0].toUpperCase() : "R"}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <CardTitle className="font-bold text-sm">
-                                        {reply.created_by?.name || "Pengguna"}
-                                      </CardTitle>
-                                      <CardDescription className="text-muted-foreground text-sm">
-                                        {reply.content || "Ini adalah balasan terhadap komentar di atas."}
-                                      </CardDescription>
+                      <div className='mt-3 space-y-4'>
+                        {comment.replies && comment.replies.length > 0 ? (
+                          comment.replies
+                            .filter(reply =>
+                              reply && reply.content && reply.created_at
+                            )
+                            .map((reply) => (
+                              <Card key={reply._id}>
+                                <CardHeader className="pb-3">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex items-start gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                        {reply.created_by?.profile_picture ? (
+                                          <img
+                                            src={reply.created_by.profile_picture}
+                                            alt={reply.created_by?.name}
+                                            className="w-full h-full rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full rounded-full bg-gray-300" />
+                                        )}
+                                      </div>
+                                      <div>
+                                        <CardTitle className="font-bold text-xs">
+                                          {reply.created_by?.name || "Pengguna"}
+                                        </CardTitle>
+                                        <CardDescription className="text-muted-foreground text-xs">
+                                          {reply.content}
+                                        </CardDescription>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              </CardHeader>
-                              <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
-                                <span>{new Date(reply.created_at).toLocaleDateString()}</span>
-                              </CardFooter>
-                            </Card>
-                          ))
+                                </CardHeader>
+                                <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+                                  <span>
+                                    {reply.created_at ?
+                                      new Date(reply.created_at).toLocaleDateString()
+                                      : "Tanggal tidak valid"}
+                                  </span>
+                                </CardFooter>
+                              </Card>
+                            ))
+                        ) : (
+                          <p className="text-center text-muted-foreground">
+                            Tidak ada balasan
+                          </p>
                         )}
                       </div>
                     </div>
                   )}
-
-
                 </div>
               ))
             ) : (
               <p className="text-center">Tidak ada komentar.</p>
             )}
           </div>
-
         </main>
       </div>
     </div>

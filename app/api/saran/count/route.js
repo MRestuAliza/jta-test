@@ -9,20 +9,38 @@ export async function GET() {
         const currentDate = new Date();
         const startOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
         const startOfLastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-
-        // Hitung total saran pada bulan ini
         const totalSaran = await Saran.countDocuments({
             created_at: { $gte: startOfCurrentMonth }
         });
-
-        // Hitung total saran pada bulan lalu
         const totalSaranLastMonth = await Saran.countDocuments({
             created_at: { $gte: startOfLastMonth, $lt: startOfCurrentMonth }
+        });
+
+
+        const saranList = await Saran.find({});
+        const statusCounts = {
+            new: 0,
+            'work in progress': 0,
+            completed: 0,
+            cancelled: 0,
+        };
+
+        saranList.forEach(saran => {
+            if (saran.status === 'new') {
+                statusCounts.new++;
+            } else if (saran.status === 'work in progress') {
+                statusCounts['work in progress']++;
+            } else if (saran.status === 'completed') {
+                statusCounts.completed++;
+            } else if (saran.status === 'cancelled') {
+                statusCounts.cancelled++;
+            }
         });
 
         return new Response(JSON.stringify({
             success: true,
             total: totalSaran,
+            statusCounts,
             totalLastMonth: totalSaranLastMonth
         }), {
             status: 200,

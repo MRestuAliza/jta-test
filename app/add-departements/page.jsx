@@ -22,16 +22,12 @@ function Page() {
     name: '',
     link: '',
     type: "",
-    fakultas_id: "",
-    prodi_id: "",
-    university_id: process.env.NEXT_PUBLIC_UNIVERSITY_ID
+    department_id: ""
   });
-
-  console.log('Form Data:', formWeb);
 
   const [facultyData, setFacultyData] = useState([]);
   const [programData, setProgramData] = useState([]);
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const [addWebsiteOrSelectProgram, setAddWebsiteOrSelectProgram] = useState('');
 
   useEffect(() => {
@@ -40,10 +36,18 @@ function Page() {
     }
   }, [status]);
 
+  console.log("Data Fakultas:", session?.user?.departementId);
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormWebData({ ...formWeb, [name]: value });
-  }
+    setFormWebData((prevData) => ({
+      ...prevData,
+      [name]: value,
+      department_id: prevData.department_id
+    }));
+  };
+
 
   const handleSelectChange = (value) => {
     setSelectedOption(value);
@@ -55,50 +59,67 @@ function Page() {
     setFormWebData((prevData) => ({ ...prevData, type: value }));
   };
 
+
+
   const fetchFaculty = async () => {
     try {
-      const response = await fetch("/api/departments/fakultas")
-
+      const response = await fetch(`/api/institusi?id=${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
       if (response.ok) {
-        const data = await response.json()
-        console.log(data);
-
-        setFacultyData(data.data)
+        const data = await response.json();
+        console.log("Data fakultas yang diambil:", data);
+        setFacultyData({ fakultas_list: data.data.fakultas_list || [] });
+        checkMatchingFaculty(data.data.fakultas_list || [])
       } else {
         console.error('Failed to fetch faculties');
       }
-
     } catch (error) {
       console.error(error);
     }
-  }
+  };
 
-  // Handle faculty selection
+  const checkMatchingFaculty = (fetchedData) => {
+    const matchedFaculty = fetchedData.find(faculty => faculty.id === session?.user?.departementId);
+    if (matchedFaculty && session?.user?.role !== 'Super Admin') {
+      setSelectedFaculty(matchedFaculty.id);
+      fetchProdi(matchedFaculty.id);
+    } else {
+      console.log("Tidak ada kecocokan untuk departmentId");
+    }
+  };
+
+  console.log("Selected Faculty:", selectedFaculty);
+
   const handleFacultySelectChange = (value) => {
     setSelectedFaculty(value);
     setFormWebData((prevData) => ({
       ...prevData,
-      fakultas_id: value
+      department_id: value
     }));
     fetchProdi(value);
-    setIsProgramDataExist(null); // Reset program data existence
+    setIsProgramDataExist(null);
   };
 
-  // Handle data existence check for faculty
+  const handleProdiSelectChange = (value) => {
+    setSelectedStudyProgram(value);
+    setFormWebData((prevData) => ({
+      ...prevData,
+      department_id: value
+    }));
+  }
+
   const handleDataExistChange = (value) => {
     const exists = value === 'Yes';
     setIsDataExist(exists);
     if (!exists) {
-      setIsFacultyFormActive(true); // Show faculty form if data does not exist
+      setIsFacultyFormActive(true);
     } else {
-      setIsFacultyFormActive(false); // Hide faculty form if data exists
+      setIsFacultyFormActive(false);
     }
 
-    setIsProgramDataExist(null); // Reset program data existence
-    setSelectedStudyProgram(''); // Reset selected study program
+    setIsProgramDataExist(null);
+    setSelectedStudyProgram('');
   };
 
-  // Handle program data existence check
   const handleProgramDataExistChange = (value) => {
     const exists = value === 'Yes';
     setIsProgramDataExist(exists);
@@ -106,9 +127,15 @@ function Page() {
 
   const handleAddWebsiteOrSelectProgramChange = (value) => {
     setAddWebsiteOrSelectProgram(value);
-    console.log("handle Add", value);
+    console.log("Add website or select program changed to:", value);
 
-    if (value === 'selectProgram') {
+    if (value === 'addWebsite') {
+      setFormWebData((prevData) => ({
+        ...prevData,
+        department_id: session?.user?.departementId || '',
+        type: 'Fakultas'
+      }));
+    } else if (value === 'selectProgram') {
       setFormWebData((prevData) => ({
         ...prevData,
         type: 'Prodi'
@@ -116,15 +143,14 @@ function Page() {
     }
   };
 
+
   const fetchProdi = async (facultyID) => {
     try {
-      const response = await fetch(`/api/departments/fakultas/prodi/${facultyID}`)
+      const response = await fetch(`/api/institusi?id=${facultyID}`)
 
       if (response.ok) {
-        const data = await response.json()
-        console.log(data);
-
-        setProgramData(data.data);
+        const data = await response.json();
+        setProgramData({ prodi_list: data.data.prodi_list || [] });
       } else {
         console.error('Failed to fetch study programs');
       }
@@ -138,77 +164,127 @@ function Page() {
     e.preventDefault();
     try {
       let response;
+      let updatedFormWeb = { ...formWeb };
 
-      // Jika user memilih 'Universitas'
+      if (session?.user?.role === 'Super Admin') {
+        if (selectedOption === 'Universitas') {
+          updatedFormWeb.department_id = process.env.NEXT_PUBLIC_UNIVERSITY_ID;
+          updatedFormWeb.type = 'Universitas';
+        } else if (selectedOption === 'Fakultas') {
+          updatedFormWeb.type = 'Fakultas';
+          if (!isDataExist) {
+            updatedFormWeb.ref_ids = [process.env.NEXT_PUBLIC_UNIVERSITY_ID];
+          } else {
+            updatedFormWeb.department_id = selectedFaculty;
+          }
+        }
+      } else if (session?.user?.type === 'Prodi') {
+        updatedFormWeb.department_id = session.user.departementId;
+        updatedFormWeb.type = 'Prodi';
+      } else {
+        if (addWebsiteOrSelectProgram === 'addWebsite') {
+          updatedFormWeb.department_id = session.user.departementId;
+          updatedFormWeb.type = 'Fakultas';
+        } else if (addWebsiteOrSelectProgram === 'selectProgram') {
+          updatedFormWeb.type = 'Prodi';
+          if (isProgramDataExist === false) {
+            updatedFormWeb.ref_ids = [process.env.NEXT_PUBLIC_UNIVERSITY_ID, selectedFaculty];
+          } else {
+            updatedFormWeb.department_id = selectedStudyProgram;
+          }
+        }
+      }
+      console.log("Data yang akan dikirim:", updatedFormWeb);
+
+
       if (selectedOption === 'Universitas') {
-        response = await fetch('/api/website/university', {
+        response = await fetch('/api/website', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(formWeb)
+          body: JSON.stringify(updatedFormWeb)
         });
-      }
-
-      // Jika user memilih 'Program Studi'
-      else if (addWebsiteOrSelectProgram === 'selectProgram') {
-        // Jika data program studi sudah ada
+      } else if (addWebsiteOrSelectProgram === 'addWebsite') {
+        response = await fetch('/api/website', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatedFormWeb)
+        });
+      } else if (addWebsiteOrSelectProgram === 'selectProgram') {
         if (isProgramDataExist === false) {
-          response = await fetch(`/api/departments/prodi`, {
+          response = await fetch(`/api/institusi`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              name: formWeb.name,  // Nama program studi baru
-              fakultas_id: selectedFaculty // Hubungkan dengan fakultas yang dipilih
+              name: formWeb.name,
+              type: 'Prodi',
+              ref_ids: [process.env.NEXT_PUBLIC_UNIVERSITY_ID, selectedFaculty]
             })
           });
         } else {
-          response = await fetch(`/api/website/prodi/${selectedStudyProgram}`, {
+          response = await fetch(`/api/website`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(formWeb)
+            body: JSON.stringify({
+              name: formWeb.name,
+              link: formWeb.link,
+              type: 'Prodi',
+              department_id: selectedStudyProgram
+            })
           });
         }
-      }
-
-      // Jika user memilih 'Fakultas'
-      else if (selectedOption === 'Fakultas') {
-        // Jika data fakultas belum ada
+      } else if (selectedOption === 'Fakultas') {
         if (!isDataExist) {
-          response = await fetch('/api/departments/fakultas', {
+          response = await fetch('/api/institusi', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name: formWeb.name, university_id: formWeb.university_id })
+            body: JSON.stringify({
+              name: formWeb.name,
+              type: 'Fakultas',
+              ref_ids: [process.env.NEXT_PUBLIC_UNIVERSITY_ID]
+            })
           });
-        }
-
-        // Jika data fakultas sudah ada, tambahkan web fakultas
-        else {
-          response = await fetch(`/api/website/fakultas/${selectedFaculty}`, {
+        } else {
+          response = await fetch(`/api/website`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(formWeb)
+            body: JSON.stringify(updatedFormWeb)
           });
         }
+      } else if (session?.user?.type === 'Prodi') {
+        response = await fetch('/api/website', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatedFormWeb)
+        });
+      } else {
+        console.error("Tidak ada opsi yang cocok");
       }
 
-      // Handle respon API
-      if (response.ok) {
+      console.log("Response dari server:", response);
+
+
+      if (response && response.ok) {
         const data = await response.json();
-        console.log('Post created:', data);
+        console.log('Website successfully added:', data);
         setFormWebData({
           name: '',
           link: '',
           type: '',
-          university_id: process.env.NEXT_PUBLIC_UNIVERSITY_ID
+          department_id: ''
         });
         Swal.fire({
           icon: 'success',
@@ -227,7 +303,8 @@ function Page() {
       console.error('An error occurred:', error);
     }
   };
-  console.log("is program data exist", isProgramDataExist);
+
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -237,35 +314,34 @@ function Page() {
         <main className='p-4 space-y-4'>
           <form className="grid gap-6" onSubmit={handleSubmit}>
 
-            {/* Level Selection */}
-            <div className="grid gap-3">
-              <Label htmlFor="level">Pilih Tingkat</Label>
-              <Select onValueChange={handleSelectChange}>
-                <SelectTrigger id="level" aria-label="Select level">
-                  <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Universitas">Universitas</SelectItem>
-                  <SelectItem value="Fakultas">Fakultas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {session?.user?.role === 'Super Admin' && (
+              <div className="grid gap-3">
+                <Label htmlFor="level">Pilih Tingkat</Label>
+                <Select onValueChange={handleSelectChange}>
+                  <SelectTrigger id="level" aria-label="Select level">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Universitas">Universitas</SelectItem>
+                    <SelectItem value="Fakultas">Fakultas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            {/* University Form */}
             {selectedOption === 'Universitas' && (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                 <div>
-                  <Label htmlFor="university-name">Name</Label>
-                  <Input id="university-name" name="name" value={formWeb.name} onChange={handleInputChange} required placeholder="Masukkan nama website" />
+                  <Label htmlFor="university-name">Nama Universitas</Label>
+                  <Input id="university-name" name="name" value={formWeb.name} onChange={handleInputChange} required placeholder="Masukkan nama website universitas" />
                 </div>
                 <div>
-                  <Label htmlFor="university-link">Website Link</Label>
+                  <Label htmlFor="university-link">Tautan Website</Label>
                   <Input id="university-link" name="link" value={formWeb.link} onChange={handleInputChange} required placeholder="Masukkan tautan website" />
                 </div>
               </div>
             )}
 
-            {/* Faculty Data Exist Check */}
             {selectedOption === 'Fakultas' && (
               <div className="grid gap-3">
                 <Label htmlFor="data-exist">Apakah data fakultas sudah ada?</Label>
@@ -281,34 +357,35 @@ function Page() {
               </div>
             )}
 
-            {/* Faculty Name Form */}
             {selectedOption === 'Fakultas' && !isDataExist && isFacultyFormActive && (
               <div className="grid gap-3">
-                <Label htmlFor="faculty-name">Nama fakultas</Label>
+                <Label htmlFor="faculty-name">Nama Fakultas</Label>
                 <Input id="faculty-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama fakultas" />
               </div>
             )}
 
-            {/* Faculty Selection Form */}
             {selectedOption === 'Fakultas' && isDataExist && (
               <>
                 <div className="grid gap-3">
                   <Label htmlFor="faculty">Pilih fakultas</Label>
                   <Select onValueChange={handleFacultySelectChange}>
                     <SelectTrigger id="faculty" aria-label="Pilih fakultas">
-                      <SelectValue placeholder="Pilih" />
+                      <SelectValue placeholder="Pilih fakultas" />
                     </SelectTrigger>
                     <SelectContent>
-                      {facultyData.map((faculty) => (
-                        <SelectItem key={faculty._id} value={faculty._id}>
-                          {faculty.name}
-                        </SelectItem>
-                      ))}
+                      {facultyData?.fakultas_list?.length > 0 ? (
+                        facultyData.fakultas_list.map((faculty) => (
+                          <SelectItem key={faculty.id} value={faculty.id}>
+                            {faculty.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem disabled>Tidak ada fakultas</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Tambahkan pilihan antara menambahkan website atau memilih program studi */}
                 {selectedFaculty && (
                   <div className="grid gap-3">
                     <Label htmlFor="add-website-or-select-program">Ingin menambahkan website atau memilih program studi?</Label>
@@ -324,12 +401,11 @@ function Page() {
                   </div>
                 )}
 
-                {/* Form untuk menambahkan website fakultas */}
                 {addWebsiteOrSelectProgram === 'addWebsite' && (
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                     <div>
                       <Label htmlFor="faculty-web-name">Nama Website Fakultas</Label>
-                      <Input id="faculty-web-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama website" />
+                      <Input id="faculty-web-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama website fakultas" />
                     </div>
                     <div>
                       <Label htmlFor="faculty-web-link">Tautan Website Fakultas</Label>
@@ -358,22 +434,20 @@ function Page() {
                       <>
                         <div className="grid gap-3">
                           <Label htmlFor="study-program">Pilih program studi</Label>
-                          <Select onValueChange={(value) => {
-                            setSelectedStudyProgram(value);
-                            setFormWebData((prevData) => ({
-                              ...prevData,
-                              prodi_id: value // Memasukkan prodi_id ke dalam formWeb
-                            }));
-                          }}>
+                          <Select onValueChange={handleProdiSelectChange}>
                             <SelectTrigger id="study-program" aria-label="Pilih program studi">
                               <SelectValue placeholder="Pilih" />
                             </SelectTrigger>
                             <SelectContent>
-                              {programData.map((program) => (
-                                <SelectItem key={program._id} value={program._id}>
-                                  {program.name}
-                                </SelectItem>
-                              ))}
+                              {facultyData?.fakultas_list?.length > 0 ? (
+                                programData.prodi_list.map((faculty) => (
+                                  <SelectItem key={faculty._id} value={faculty._id}>
+                                    {faculty.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem disabled>Tidak ada fakultas</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -405,6 +479,114 @@ function Page() {
 
               </>
             )}
+
+            {session?.user?.role !== 'Super Admin' && (
+              <>
+                {selectedFaculty && (
+                  <div className="grid gap-3">
+                    <Label htmlFor="add-website-or-select-program">Ingin menambahkan website atau memilih program studi?</Label>
+                    <Select onValueChange={handleAddWebsiteOrSelectProgramChange}>
+                      <SelectTrigger id="add-website-or-select-program" aria-label="Tambah website atau pilih prodi">
+                        <SelectValue placeholder="Pilih" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="addWebsite">Tambahkan Website Fakultas</SelectItem>
+                        <SelectItem value="selectProgram">Pilih Program Studi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {addWebsiteOrSelectProgram === 'addWebsite' && (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                    <div>
+                      <Label htmlFor="faculty-web-name">Nama Website Fakultas</Label>
+                      <Input id="faculty-web-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama website fakultas" />
+                    </div>
+                    <div>
+                      <Label htmlFor="faculty-web-link">Tautan Website Fakultas</Label>
+                      <Input id="faculty-web-link" name="link" value={formWeb.link} onChange={handleInputChange} placeholder="Masukkan tautan website" />
+                    </div>
+                  </div>
+                )}
+
+                {addWebsiteOrSelectProgram === 'selectProgram' && (
+                  <>
+                    <div className="grid gap-3">
+                      <Label htmlFor="program-data-exist">Apakah data program studi sudah ada?</Label>
+                      <Select onValueChange={handleProgramDataExistChange}>
+                        <SelectTrigger id="program-data-exist" aria-label="Apakah data program studi sudah ada?">
+                          <SelectValue placeholder="Pilih" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Yes">Ya</SelectItem>
+                          <SelectItem value="No">Tidak</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {isProgramDataExist === true && (
+                      <>
+                        <div className="grid gap-3">
+                          <Label htmlFor="study-program">Pilih program studi</Label>
+                          <Select onValueChange={handleProdiSelectChange}>
+                            <SelectTrigger id="study-program" aria-label="Pilih program studi">
+                              <SelectValue placeholder="Pilih" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {facultyData?.fakultas_list?.length > 0 ? (
+                                programData.prodi_list.map((faculty) => (
+                                  <SelectItem key={faculty._id} value={faculty._id}>
+                                    {faculty.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem disabled>Tidak ada fakultas</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Form untuk menambahkan website program studi */}
+                        {selectedStudyProgram && (
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                            <div>
+                              <Label htmlFor="study-program-web-name">Nama Website Program Studi</Label>
+                              <Input id="study-program-web-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama website program studi" />
+                            </div>
+                            <div>
+                              <Label htmlFor="study-program-web-link">Tautan Website Program Studi</Label>
+                              <Input id="study-program-web-link" name="link" value={formWeb.link} onChange={handleInputChange} placeholder="Masukkan tautan website program studi" />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {isProgramDataExist === false && (
+                      <div className="grid gap-3">
+                        <Label htmlFor="new-program-name">Nama program studi baru</Label>
+                        <Input id="new-program-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama program studi" />
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+
+            {session?.user?.type === 'Prodi' && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                <div>
+                  <Label htmlFor="study-program-web-name">Nama Website Program Studi</Label>
+                  <Input id="study-program-web-name" name="name" value={formWeb.name} onChange={handleInputChange} placeholder="Masukkan nama website program studi" />
+                </div>
+                <div>
+                  <Label htmlFor="study-program-web-link">Tautan Website Program Studi</Label>
+                  <Input id="study-program-web-link" name="link" value={formWeb.link} onChange={handleInputChange} placeholder="Masukkan tautan website program studi" />
+                </div>
+              </div>
+            )}
+
             <div className="flex pt-4 flex-col mx-auto gap-4">
               <Button className="w-96">Submit</Button>
               <Button variant="outline" className="w-96">Cancel</Button>
@@ -416,4 +598,4 @@ function Page() {
   )
 }
 
-export default withAuth(Page)
+export default withAuth(Page);

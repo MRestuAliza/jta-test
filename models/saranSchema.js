@@ -29,7 +29,7 @@ const SaranSchema = new mongoose.Schema({
     },
     voteScore: {
         type: Number,
-        default: 0,  // Menyimpan score total upvote-downvote
+        default: 0,
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,

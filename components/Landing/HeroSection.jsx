@@ -22,10 +22,9 @@ const Hero = () => {
         //     </div>
         // </section >
         <div className="container pt-24 md:pt-48 px-6 mx-auto flex flex-wrap flex-col md:flex-row items-center">
-            {/* Left Col */}
             <div className="flex flex-col w-full xl:w-2/5 justify-center lg:items-start overflow-y-hidden">
                 <h1 className="my-4 text-2xl md:text-4xl font-bold leading-tight text-center md:text-left slide-in-bottom-h1">
-                    Form Saran Web Universitas dan Fakultas Teknik
+                    Saranin
                 </h1>
                 <p className="leading-normal text-base md:text-2xl text-[#64748B] mb-8 text-center md:text-left slide-in-bottom-subtitle">
                     Layanan Saran Web Universitas dan Fakultas Teknik
@@ -47,7 +46,6 @@ const Hero = () => {
             <div className="w-full xl:w-3/5 py-6 overflow-y-hidden">
                 <img className="w-5/6 mx-auto lg:mr-0 slide-in-bottom" src="saran.svg" alt="Devices" />
             </div>
-
             {/* Footer */}
             {/* <div className="w-full pt-16 pb-6 text-sm text-center md:text-left fade-in">
                 <a className="text-gray-500 no-underline hover:no-underline" href="#">

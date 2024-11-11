@@ -1,15 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { Home, List, ListPlus, Package, Users2, MailPlus, Mail, Settings } from "lucide-react";
+import { Home, List, ListPlus, Package, Users2, Mail } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {  usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useSession } from "next-auth/react";
 
 const Sidebar = () => {
     const router = usePathname();
-    const routerSegements = router.split("/").filter(segments => segments);
-    const path = `/${routerSegements[0]}`;
+    const routerSegments = router.split("/").filter(segment => segment);
+    const path = `/${routerSegments[0]}`;
+    const { data: session } = useSession();
+    const role = session?.user?.role;
 
+    const menuItems = {
+        admin: [
+            { href: "/dashboard", icon: <Home className="h-5 w-5" />, label: "Beranda" },
+            { href: "/departements", icon: <List className="h-5 w-5" />, label: "Departements" },
+            { href: "/add-departements", icon: <ListPlus className="h-5 w-5" />, label: "Add Departements" },
+            { href: "/users", icon: <Users2 className="h-5 w-5" />, label: "Users" },
+            { href: "/saran", icon: <Mail className="h-5 w-5" />, label: "Saran" },
+        ],
+        mahasiswa: [
+            { href: "/mahasiswa/dashboard", icon: <Home className="h-5 w-5" />, label: "Beranda" },
+            { href: "/mahasiswa/saran", icon: <Mail className="h-5 w-5" />, label: "Saran" },
+        ]
+    };
+    const roleBasedItems = role === 'Mahasiswa' ? menuItems.mahasiswa : menuItems.admin;
 
     return (
         <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
@@ -18,79 +35,23 @@ const Sidebar = () => {
                     <Package className="h-4 w-4 transition-all group-hover:scale-110" />
                     <span className="sr-only">Acme Inc</span>
                 </Link>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Link href="/dashboard" className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/dashboard" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}>
-                            <Home className="h-5 w-5" />
-                            <span className="sr-only">Dashboard</span>
-                        </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Dashboard</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Link
-                            href="/departements"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/departements" ? " bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
-                        >
-                            <List className="h-5 w-5" />
-                            <span className="sr-only">Departements</span>
-                        </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Departements</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Link
-                            href="/add-departements"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/add-departements" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
-                        >
-                            <ListPlus className="h-5 w-5" />
-                            <span className="sr-only">Add Departements</span>
-                        </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Add Departements</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Link
-                            href="/users"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/users" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
-                        >
-                            <Users2 className="h-5 w-5" />
-                            <span className="sr-only">Users</span>
-                        </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Users</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Link
-                            href="/saran"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/saran" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
-                        >
-                            <Mail className="h-5 w-5" />
-                            <span className="sr-only">Saran</span>
-                        </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Saran</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Link
-                            href="/add-saran"
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === "/add-saran" ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
-                        >
-                            <MailPlus className="h-5 w-5" />
-                            <span className="sr-only">Tambah group saran</span>
-                        </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Tambah group saran</TooltipContent>
-                </Tooltip>
-                
+                {roleBasedItems.map(({ href, icon, label }) => (
+                    <Tooltip key={href}>
+                        <TooltipTrigger asChild>
+                            <Link
+                                href={href}
+                                className={`flex h-9 w-9 items-center justify-center rounded-lg ${path === href ? "bg-accent" : "text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"}`}
+                            >
+                                {icon}
+                                <span className="sr-only">{label}</span>
+                            </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{label}</TooltipContent>
+                    </Tooltip>
+                ))}
             </nav>
         </aside>
-    )
+    );
 };
 
 export default Sidebar;

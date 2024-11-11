@@ -5,12 +5,12 @@ import Link from "next/link"
 import React, { useEffect, useState } from 'react';
 import {
     Home,
-    LineChart,
-    Package,
     Package2,
     PanelLeft,
-    Search,
-    ShoppingCart,
+    Mail,
+    List,
+    ListPlus,
+    CircleUser,
     Users2,
 } from "lucide-react";
 import {
@@ -28,13 +28,17 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from "next-auth/react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 const Header = ({ BreadcrumbLinkTitle }) => {
     const { status, data: session } = useSession();
+    const router = usePathname();
+    const routerSegements = router.split("/").filter(segments => segments);
+    const path = `/${routerSegements[0]}`;
     const [photoURL, setPhotoURL] = useState();
+    const role = session?.user?.role;
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -42,18 +46,12 @@ const Header = ({ BreadcrumbLinkTitle }) => {
         }
     }, [session, status]);
 
-
-
-
     const fetchData = async () => {
         if (!session?.user?.id) return;
         try {
             const response = await fetch(`/api/auth/users/${session.user.id}`);
             const data = await response.json();
             if (response.ok) {
-                // setName(data.user.name || '');
-                // setEmail(data.user.email || '');
-                // setRole(data.user.role || '');
                 setPhotoURL(data.user.profilePicture || '');
             } else {
                 console.error("Error fetching user data:", data.message);
@@ -62,6 +60,23 @@ const Header = ({ BreadcrumbLinkTitle }) => {
             console.error("Error fetching user data:", error);
         }
     };
+    console.log("ads", photoURL);
+    
+    const menuItems = {
+        admin: [
+            { href: "/dashboard", icon: <Home className="h-5 w-5" />, label: "Beranda" },
+            { href: "/departements", icon: <List className="h-5 w-5" />, label: "Departements" },
+            { href: "/add-departements", icon: <ListPlus className="h-5 w-5" />, label: "Add Departements" },
+            { href: "/users", icon: <Users2 className="h-5 w-5" />, label: "Users" },
+            { href: "/saran", icon: <Mail className="h-5 w-5" />, label: "Saran" },
+        ],
+        mahasiswa: [
+            { href: "/mahasiswa/dashboard", icon: <Home className="h-5 w-5" />, label: "Beranda" },
+            { href: "/mahasiswa/saran", icon: <Mail className="h-5 w-5" />, label: "Saran" },
+        ]
+    };
+    const roleBasedItems = role === 'Mahasiswa' ? menuItems.mahasiswa : menuItems.admin;
+
     return (
         <header className="sticky justify-between top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <Sheet>
@@ -80,41 +95,15 @@ const Header = ({ BreadcrumbLinkTitle }) => {
                             <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
                             <span className="sr-only">Acme Inc</span>
                         </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-                        >
-                            <Home className="h-5 w-5" />
-                            Dashboard
-                        </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-4 px-2.5 text-foreground"
-                        >
-                            <ShoppingCart className="h-5 w-5" />
-                            Orders
-                        </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-                        >
-                            <Package className="h-5 w-5" />
-                            Products
-                        </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-                        >
-                            <Users2 className="h-5 w-5" />
-                            Customers
-                        </Link>
-                        <Link
-                            href="#"
-                            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-                        >
-                            <LineChart className="h-5 w-5" />
-                            Settings
-                        </Link>
+                        {roleBasedItems.map(({ href, icon, label }) => (
+                            <Link
+                                href={href}
+                                className={`flex items-center gap-4 px-2.5 ${path === href ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                            >
+                                {icon}
+                                {label}
+                            </Link>
+                        ))}
                     </nav>
                 </SheetContent>
             </Sheet>
@@ -127,7 +116,7 @@ const Header = ({ BreadcrumbLinkTitle }) => {
                     </BreadcrumbItem>
                     {/* <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                        <BreadcrumbLink asChild>
+                        <BreadcrumbLink asChild</DropdownMenuTrigger>>
                             <Link href="#">Orders</Link>
                         </BreadcrumbLink>
                     </BreadcrumbItem>
@@ -137,14 +126,6 @@ const Header = ({ BreadcrumbLinkTitle }) => {
                     </BreadcrumbItem> */}
                 </BreadcrumbList>
             </Breadcrumb>
-            {/* <div className="relative ml-auto flex-1 md:grow-0">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search..."
-                    className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
-                />
-            </div> */}
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button
@@ -152,19 +133,17 @@ const Header = ({ BreadcrumbLinkTitle }) => {
                         size="icon"
                         className="overflow-hidden rounded-full"
                     >
-                        <Image
-                            src={photoURL || '/avatar.jpg'}
-                            width={36}
-                            height={36}
+                        <img
+                            src={photoURL || "/profile.svg"}
                             alt="Avatar"
-                            className="overflow-hidden rounded-full"
+                            className="overflow-hidden w-10 w- h-10 rounded-full"
                         />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Settings</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.location.href = '/settings'}>Settings</DropdownMenuItem>
                     <DropdownMenuItem>Support</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>Logout</DropdownMenuItem>
