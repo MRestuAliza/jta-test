@@ -1,6 +1,6 @@
 import { connectMongoDB } from "@/libs/mongodb";
 import { NextResponse } from "next/server";
-import Comment from "@/models/tes/commentSchema";
+import Comment from "@/models/commentSchema";
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
 

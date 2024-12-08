@@ -11,10 +11,9 @@ import withAuth from '@/libs/withAuth';
 import { useParams } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import Swal from 'sweetalert2';
-import { debounce } from 'lodash';
+import { debounce, set } from 'lodash';
 
 function DetailPage() {
-  // State declarations
   const [showReplyForm, setShowReplyForm] = useState({});
   const [replyContents, setReplyContents] = useState({});
   const [commentContent, setCommentContent] = useState({
@@ -26,12 +25,12 @@ function DetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [comments, setComments] = useState([]);
   const [userVotes, setUserVotes] = useState({});
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingReplayComment, setIsSubmittingReplayComment] = useState(false);
   const params = useParams();
   const slug = params.slug || [];
   const { status, data: session } = useSession();
 
-  // Effects
   useEffect(() => {
     if (status === "authenticated") {
       fetchDetail();
@@ -46,7 +45,6 @@ function DetailPage() {
     }
   }, [comments]);
 
-  // Toggle reply form visibility
   const toggleReplyForm = (commentId) => {
     setShowReplyForm(prevState => ({
       ...prevState,
@@ -54,7 +52,6 @@ function DetailPage() {
     }));
   };
 
-  // Handle reply input changes
   const handleReplyChange = (commentId, value) => {
     setReplyContents(prev => ({
       ...prev,
@@ -62,11 +59,12 @@ function DetailPage() {
     }));
   };
 
-  // Handle reply submission
   const handleReplySubmit = async (e, commentId) => {
     e.preventDefault();
-    const userId = session.user.id;
+    if (isSubmittingReplayComment) return
+    setIsSubmittingReplayComment(true);
 
+    const userId = session.user.id;
     try {
       const content = replyContents[commentId] || '';
 
@@ -104,12 +102,15 @@ function DetailPage() {
       }
     } catch (error) {
       console.error("Error:", error);
+    } finally {
+      setIsSubmittingReplayComment(false);
     }
   };
 
-  // Handle main comment submission
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const userId = session.user.id;
 
     try {
@@ -141,10 +142,11 @@ function DetailPage() {
       }
     } catch (error) {
       console.error("Error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Fetch detail data
   const fetchDetail = async () => {
     setIsLoading(true);
     try {
@@ -162,7 +164,6 @@ function DetailPage() {
     }
   };
 
-  // Fetch comments
   const fetchComments = async () => {
     try {
       const response = await fetch(`/api/comments?saran_id=${slug[0]}`);
@@ -177,7 +178,6 @@ function DetailPage() {
     }
   };
 
-  // Fetch user votes
   const fetchUserVotes = async () => {
     try {
       const userId = session.user.id;
@@ -294,8 +294,8 @@ function DetailPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" type="submit">
-                    Kirim Komentar
+                  <Button className="w-full" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Mengirim...' : ' Kirim Komentar'}
                   </Button>
                 </CardFooter>
               </form>
@@ -399,8 +399,8 @@ function DetailPage() {
                             />
                           </CardContent>
                           <CardFooter>
-                            <Button type="submit" className="w-full">
-                              Kirim Balasan
+                            <Button type="submit" className="w-full" disabled={isSubmittingReplayComment}>
+                              {isSubmittingReplayComment ? 'Mengirim...' : 'Kirim Balasan'}
                             </Button>
                           </CardFooter>
                         </form>

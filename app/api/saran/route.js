@@ -1,10 +1,9 @@
 import { connectMongoDB } from "@/libs/mongodb";
-import GroupSaran from '@/models/tes/groupSaranSchema';
-import Website from '@/models/tes/webSchema';
-import Saran from "@/models/tes/saranSchema";
-import Comment from "@/models/tes/commentSchema";
-import User from "@/models/tes/userSchema";
-import Vote from '@/models/tes/voteSchema';
+import Website from '@/models/webSchema';
+import Saran from "@/models/saranSchema";
+import Comment from "@/models/commentSchema";
+import User from "@/models/userSchema";
+import Vote from '@/models/voteSchema';
 import { NextResponse } from 'next/server';
 import { validate as uuidValidate } from 'uuid';
 import nodemailer from 'nodemailer';
@@ -38,7 +37,9 @@ export async function GET(req) {
             const saranListWithUsers = await Promise.all(
                 saranList.map(async (saran) => {
                     const user = await User.findById(saran.created_by).select("name profilePicture");
-                    const group = await Website.findById(saran.groupSaranId).select("name");
+                    const group = await Website.findById(saran.webId).select("name");
+                    console.log('User:', user);
+                    
                     return {
                         ...saran,
                         created_by: user ? user.name : 'Unknown',
@@ -114,8 +115,6 @@ export async function GET(req) {
                 status: 404,
             });
         }
-
-        console.log('Group Saran:', groupSaran);
         
         const saranList = await Saran.find({ webId: groupSaran._id }).lean();
 
@@ -267,11 +266,7 @@ export async function PATCH(req) {
                 }
             );
         }
-
-        // if (!adminEmails || !Array.isArray(adminEmails) || adminEmails.length === 0) {
-        //     return new NextResponse(JSON.stringify({ message: "Admin emails are required" }), { status: 400 });
-        // }
-
+        
         const updatedSaran = await Saran.findByIdAndUpdate(
             id,
             { status: status, updated_at: Date.now() },

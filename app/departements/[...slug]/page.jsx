@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/General/Sidebar";
 import Header from "@/components/General/Header";
-import { ArrowUpRight, Search, MoreVertical } from "lucide-react";
+import { ArrowUpRight, Search, MoreVertical, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,15 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -57,31 +66,49 @@ function DepartmentPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [editId, setEditId] = useState(null);
   const [facultyData, setFacultyData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
+
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchDepartments();
+      fetchDepartments(currentPage);
       fetchFaculty();
     }
-  }, [status, slug]);
+  }, [status, slug, currentPage]);
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = async (page) => {
+    setIsLoading(true);
     try {
       let response;
-      let combinedData = []
+      let combinedData = [];
       if (session?.user?.role.startsWith('Admin')) {
-        response = await fetch(`/api/institusi?id=${slug[0]}&role=${session?.user?.role}`);
+        response = await fetch(
+          `/api/institusi?id=${slug[0]}&role=${session?.user?.role}&page=${page}&limit=${itemsPerPage}`
+        );
         const data = await response.json();
-        console.log("Data fakultas yang diambil admin:", data);
-
-        combinedData = [
-          ...(data.data.prodi_websites || []),
-        ];
+        if (session?.user?.type === "Prodi") {
+          combinedData = data.data.prodi_websites || [];
+        } else {
+          combinedData = [
+            ...(data.data.fakultas_websites || []),
+            ...(data.data.prodi_list || []),
+          ];
+        }
+        setTotalItems(data.total);
+        setTotalPages(Math.ceil(data.total / itemsPerPage));
       } else {
         if (slug.length === 1) {
-          response = await fetch(`/api/institusi?id=${slug[0]}`);
+          response = await fetch(
+            `/api/institusi?id=${slug[0]}&page=${page}&limit=${itemsPerPage}`
+          );
         } else if (slug.length === 2) {
-          response = await fetch(`/api/institusi?id=${slug[1]}`);
+          response = await fetch(
+            `/api/institusi?id=${slug[1]}&page=${page}&limit=${itemsPerPage}`
+          );
         } else {
           console.error("Unexpected slug length");
           return;
@@ -97,10 +124,14 @@ function DepartmentPage() {
             ...(data.data.prodi_websites || []),
           ];
         }
+        setTotalItems(data.total);
+        setTotalPages(Math.ceil(data.total / itemsPerPage));
       }
       setDepartments(combinedData);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -111,7 +142,6 @@ function DepartmentPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log("Data fakultas yang diambil:", data);
         setFacultyData({ fakultas_list: data.data.fakultas_list || [] });
       } else {
         console.error("Failed to fetch faculties");
@@ -124,6 +154,15 @@ function DepartmentPage() {
   const handleProdiSelectChange = (fakultasId) => {
     setSelectedFakultasId(fakultasId);
   };
+
+  const LoadingOverlay = () => (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+      <div className="flex items-center gap-2 rounded-md bg-background p-4 shadow-md">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="text-sm font-medium">Loading data...</span>
+      </div>
+    </div>
+  );
 
   const deleteDepartment = async (id) => {
     try {
@@ -296,6 +335,47 @@ function DepartmentPage() {
       )
     );
   };
+
+  const CustomPagination = () => {
+    const handlePageChange = (page) => {
+      setCurrentPage(page);
+      window.scrollTo(0, 0);
+    };
+
+    return (
+      <div className="">
+        <div className="flex items-center justify-between">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                  className={`${currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} ${isLoading ? "pointer-events-none" : ""}`}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    onClick={() => handlePageChange(page)}
+                    isActive={currentPage === page}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                  className={`${currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} ${isLoading ? "pointer-events-none" : ""}`}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar />
@@ -304,115 +384,120 @@ function DepartmentPage() {
         <main className="p-4 space-y-4">
           <div>
             <Card x-chunk="dashboard-05-chunk-2">
-              <CardHeader className="flex flex-row items-center">
+              <CardHeader className="">
                 <div className="grid gap-2">
                   <CardTitle className="">List Departemen</CardTitle>
                 </div>
-                <div className="relative ml-auto flex-1 md:grow-0">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search..."
-                    className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
-                  />
-                </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead className="hidden sm:table-cell">
-                          Link
-                        </TableHead>
-                        <TableHead className="hidden sm:table-cell">
-                          Level
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Date
-                        </TableHead>
-                        <TableHead className="text-right"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {departments.map((department) => {
-                        return (
-                          <TableRow key={department._id || department.id}>
-                            <TableCell>
-                              <div className="font-medium">{department.name}</div>
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              {department.link || "-"}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              <Badge className="text-xs" variant="secondary">
-                                {department.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {department.updated_at
-                                ? formatDate(department.updated_at)
-                                : "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8"
-                                  >
-                                    <MoreVertical className="h-3.5 w-3.5" />
-                                    <span className="sr-only">More</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>
-                                    {department.link_advice ? (
-
-                                      <Link
-                                        className="w-full"
-                                        href={`/saran/${department.link_advice}`}
+                {isLoading && <LoadingOverlay />}
+                <div className={`transition-all duration-200 ${isLoading ? 'opacity-40 pointer-events-none' : ''}`}>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            Link
+                          </TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            Level
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell">
+                            Date
+                          </TableHead>
+                          <TableHead className="text-right"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {departments.length > 0 ? (
+                          departments.map((department) => (
+                            <TableRow key={department._id || department.id}>
+                              <TableCell>
+                                <div className="font-medium">{department.name}</div>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                {department.link || "-"}
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <Badge className="text-xs" variant="secondary">
+                                  {department.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {department.updated_at
+                                  ? formatDate(department.updated_at)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-8 w-8"
+                                    >
+                                      <MoreVertical className="h-3.5 w-3.5" />
+                                      <span className="sr-only">More</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                      {department.link_advice ? (
+                                        <Link
+                                          className="w-full"
+                                          href={`/saran/${department.link_advice}`}
                                         >
-                                        Open
-                                      </Link>
-                                    ) : (
-                                      <Link
-                                        className="w-full"
-                                        href={`/departements/${slug[0]}/${department._id || department.id
-                                          }`}
-                                      >
-                                        Open
-                                      </Link>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      setEditId(department._id || department.id)
-                                    }
-                                  >
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-red-500"
-                                    onClick={() =>
-                                      setDeleteId(department._id || department.id)
-                                    }
-                                  >
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                          Open
+                                        </Link>
+                                      ) : (
+                                        <Link
+                                          className="w-full"
+                                          href={`/departements/${slug[0]}/${department._id || department.id}`}
+                                        >
+                                          Open
+                                        </Link>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        setEditId(department._id || department.id)
+                                      }
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-red-500"
+                                      onClick={() =>
+                                        setDeleteId(department._id || department.id)
+                                      }
+                                    >
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center">
+                              <div className="text-muted-foreground">Tidak ada saran yang dibuat</div>
                             </TableCell>
                           </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <CustomPagination />
                 </div>
               </CardContent>
+              <CardFooter>
+                <div className="text-xs text-muted-foreground mt-4">
+                  Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)}</strong> of <strong>{totalItems}</strong> users
+                </div>
+              </CardFooter>
             </Card>
           </div>
         </main>
@@ -458,7 +543,6 @@ function DepartmentPage() {
               }
             </AlertDialogTitle>
             <AlertDialogDescription className="grid gap-3 ">
-              {/* Menggunakan logika untuk menampilkan form yang sesuai berdasarkan tipe department */}
               {(() => {
                 const department = departments.find(
                   (dept) => dept._id === editId
@@ -543,8 +627,6 @@ function DepartmentPage() {
                     );
                   }
                 }
-
-                // Jika ada link dan type sesuai, jalankan sesuai case type-nya
                 switch (department.type) {
                   case "Universitas":
                     return (

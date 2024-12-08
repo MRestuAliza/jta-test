@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Sidebar from '@/components/General/Sidebar';
 import Link from 'next/link';
 import Header from "@/components/General/Header";
-import { ChevronDown, ArrowRight, Trash2, ChevronUp, MessageSquare } from "lucide-react";
+import { ChevronDown, ArrowRight, ChevronUp, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSession } from "next-auth/react";
 import {
@@ -40,8 +40,8 @@ function AdviceGroupPage() {
     const [notFound, setNotFound] = useState(false);
     const [userVotes, setUserVotes] = useState({});
     const params = useParams();
-
     const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
 
     useEffect(() => {
@@ -89,13 +89,11 @@ function AdviceGroupPage() {
                 throw new Error('Data tidak ditemukan');
             }
             const data = await response.json();
-            console.log('Data advice:', data);
 
             if (!data || !data.data || data.data.length === 0) {
                 setNotFound(true);
             } else {
                 const adviceArray = Object.values(data.data);
-
                 setAdvice(adviceArray);
                 setNotFound(false);
             }
@@ -106,9 +104,6 @@ function AdviceGroupPage() {
             setIsLoading(false);
         }
     };
-
-    console.log('advice:', emailList);
-
 
     const fetchEmailList = async () => {
         try {
@@ -136,7 +131,7 @@ function AdviceGroupPage() {
                     votesData[item._id] = userVote;
                 } else if (response.status === 404) {
                     console.warn(`Data not found for saranId ${item._id}`);
-                    votesData[item._id] = 0;  // Nilai default jika tidak ditemukan
+                    votesData[item._id] = 0;
                 } else {
                     console.error("Failed to fetch vote status");
                 }
@@ -150,15 +145,10 @@ function AdviceGroupPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+
         const userId = session.user.id;
-
-        console.log('Form data yang dikirim:', {
-            title: formWeb.title,
-            description: formWeb.description,
-            userId: userId,
-            adminEmails: emailList
-        });
-
         try {
             const response = await fetch(`/api/saran?link=${id}`, {
                 method: 'POST',
@@ -174,7 +164,6 @@ function AdviceGroupPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('Post created:', data);
                 setFormWeb({
                     title: '',
                     description: ''
@@ -191,7 +180,7 @@ function AdviceGroupPage() {
                 });
             } else {
                 const errorData = await response.json();
-                console.log(`Error: ${errorData.message}`);
+                console.error(`Error: ${errorData.message}`);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -203,6 +192,8 @@ function AdviceGroupPage() {
             }
         } catch (error) {
             console.error(error)
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -245,11 +236,6 @@ function AdviceGroupPage() {
         }
     }, 500);
 
-
-    console.log("asd",advice);
-    
-
-
     if (isLoading) {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -260,7 +246,6 @@ function AdviceGroupPage() {
             </div>
         );
     }
-
 
     if (notFound) {
         return (
@@ -309,7 +294,13 @@ function AdviceGroupPage() {
                                         </div>
                                     </CardContent>
                                     <CardFooter>
-                                        <Button className="w-full" type="submit">Kirim saran</Button>
+                                        <Button
+                                            className="w-full"
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                        >
+                                            {isSubmitting ? 'Mengirim...' : 'Kirim saran'}
+                                        </Button>
                                     </CardFooter>
                                 </form>
                             </Card>

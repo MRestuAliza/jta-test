@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import Swal from 'sweetalert2';
 import Loading from '@/components/General/Loading';
 import withAuth from '@/libs/withAuth';
+import Link from "next/link";
 
 
 function Settings() {
@@ -17,6 +18,7 @@ function Settings() {
   const [user, setUser] = useState(null);
   const [name, setName] = useState("");
   const [nim, setNim] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [profilePicture, setProfilePicture] = useState(null);
@@ -75,6 +77,7 @@ function Settings() {
       if (profilePicture) {
         const formData = new FormData();
         formData.append("name", name);
+        formData.append("email", email);
         formData.append("nim", nim);
         formData.append("password", password);
         formData.append("newPassword", newPassword);
@@ -88,6 +91,7 @@ function Settings() {
 
         const data = {
           name,
+          email,
           nim,
           password,
           newPassword,
@@ -169,7 +173,7 @@ function Settings() {
                   <Label>Nama</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={user?.name} />
 
-                  {user?.role === "mahasiswa" && (
+                  {session?.user?.role === "Mahasiswa" && (
                     <div>
                       <Label>NIM Mahasiswa</Label>
                       <Input value={nim} onChange={(e) => setNim(e.target.value)} placeholder="f1*******" />
@@ -184,7 +188,7 @@ function Settings() {
                   <CardDescription>Perbarui email akun kamu.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Input placeholder="Email Terbaru" type="email" />
+                  <Input placeholder="Email Terbaru" type="email" value={email}  onChange={(e) => setEmail(e.target.value)}/>
                 </CardContent>
               </Card>
               {user?.loginProvider === "credentials" && (
@@ -218,8 +222,10 @@ function Settings() {
               <Button type="submit" className="w-full">
                 {loadingForm ? <Loading /> : "Simpan"}
               </Button>
-              <Button variant="outline" className="text-red-500 border-red-500 w-full">Batal</Button>
             </form>
+            <Button variant="outline" className="text-red-500 border-red-500 w-full">
+              <Link href="/dashboard">Kembali</Link>
+            </Button>
           </div>
         </div>
       </main>

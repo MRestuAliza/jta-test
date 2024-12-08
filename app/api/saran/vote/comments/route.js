@@ -1,6 +1,6 @@
 import { connectMongoDB } from "@/libs/mongodb";
-import Saran from '@/models/tes/saranSchema';
-import Comment from '@/models/tes/commentSchema';
+import Saran from '@/models/saranSchema';
+import Comment from '@/models/commentSchema';
 
 export async function GET(req) {
     await connectMongoDB();

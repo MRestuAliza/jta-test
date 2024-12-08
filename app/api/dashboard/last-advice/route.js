@@ -1,7 +1,7 @@
 import { connectMongoDB } from "@/libs/mongodb";
-import Saran from "@/models/tes/saranSchema";
-import User from "@/models/tes/userSchema";
-import Web from "@/models/tes/webSchema"; 
+import Saran from "@/models/saranSchema";
+import User from "@/models/userSchema";
+import Web from "@/models/webSchema"; 
 
 export async function GET(req) {
     await connectMongoDB();

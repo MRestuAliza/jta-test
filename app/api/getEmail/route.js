@@ -1,7 +1,7 @@
-import Website from '@/models/tes/webSchema';
-import Saran from "@/models/tes/saranSchema";
-import Department from "@/models/tes/departementSchema";
-import User from "@/models/tes/userSchema";
+import Website from '@/models/webSchema';
+import Saran from "@/models/saranSchema";
+import Department from "@/models/departementSchema";
+import User from "@/models/userSchema";
 import { connectMongoDB } from "@/libs/mongodb";
 import { NextResponse } from 'next/server';
 

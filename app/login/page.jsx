@@ -15,9 +15,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Loading from '@/components/General/Loading';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function LoginForm() {
     const router = useRouter();
+    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -42,6 +44,16 @@ export function LoginForm() {
         } else {
             setLoadingForm(false);
             console.log('Login failed:', res.error);
+            if (res.error) {
+                // Handle specific error messages
+                if (res.error === 'Email tidak ditemukan.') {
+                    setError('Email tidak terdaftar!');
+                } else if (res.error === 'Kata sandi salah.') {
+                    setError('Password yang Anda masukkan salah!');
+                } else {
+                    setError('Gagal masuk. Silakan coba lagi.');
+                }
+            }
 
         }
     };
@@ -53,8 +65,6 @@ export function LoginForm() {
                 router.push('/dashboard');
             } else {
                 console.log('Google sign-in failed:', googleRes?.error);
-                setError(googleRes?.error);
-                setLoadingGoogle(false);
             }
         }, 500);
     };
@@ -70,7 +80,14 @@ export function LoginForm() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-2">
-                        <form className='grid gap-4' action="" onSubmit={handleSubmit}>
+                        <form className='grid gap-4' onSubmit={handleSubmit}>
+                            {error && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>
+                                        {error}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email</Label>
                                 <Input
@@ -86,7 +103,7 @@ export function LoginForm() {
                             <div className="grid gap-2">
                                 <div className="flex items-center">
                                     <Label htmlFor="password">Password</Label>
-                                    <Link href="#" className="ml-auto inline-block text-sm underline">
+                                    <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
                                         Forgot your password?
                                     </Link>
                                 </div>

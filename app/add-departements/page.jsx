@@ -18,6 +18,10 @@ function Page() {
   const [isDataExist, setIsDataExist] = useState(null);
   const [isFacultyFormActive, setIsFacultyFormActive] = useState(false);
   const [isProgramDataExist, setIsProgramDataExist] = useState(null);
+  const [facultyData, setFacultyData] = useState([]);
+  const [programData, setProgramData] = useState([]);
+  const { status, data: session } = useSession();
+  const [addWebsiteOrSelectProgram, setAddWebsiteOrSelectProgram] = useState('');
   const [formWeb, setFormWebData] = useState({
     name: '',
     link: '',
@@ -25,19 +29,12 @@ function Page() {
     department_id: ""
   });
 
-  const [facultyData, setFacultyData] = useState([]);
-  const [programData, setProgramData] = useState([]);
-  const { status, data: session } = useSession();
-  const [addWebsiteOrSelectProgram, setAddWebsiteOrSelectProgram] = useState('');
 
   useEffect(() => {
     if (status === "authenticated") {
       fetchFaculty();
     }
   }, [status]);
-
-  console.log("Data Fakultas:", session?.user?.departementId);
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -47,7 +44,6 @@ function Page() {
       department_id: prevData.department_id
     }));
   };
-
 
   const handleSelectChange = (value) => {
     setSelectedOption(value);
@@ -59,14 +55,11 @@ function Page() {
     setFormWebData((prevData) => ({ ...prevData, type: value }));
   };
 
-
-
   const fetchFaculty = async () => {
     try {
       const response = await fetch(`/api/institusi?id=${process.env.NEXT_PUBLIC_UNIVERSITY_ID}`);
       if (response.ok) {
         const data = await response.json();
-        console.log("Data fakultas yang diambil:", data);
         setFacultyData({ fakultas_list: data.data.fakultas_list || [] });
         checkMatchingFaculty(data.data.fakultas_list || [])
       } else {
@@ -83,11 +76,9 @@ function Page() {
       setSelectedFaculty(matchedFaculty.id);
       fetchProdi(matchedFaculty.id);
     } else {
-      console.log("Tidak ada kecocokan untuk departmentId");
+      console.error("Tidak ada kecocokan untuk departmentId");
     }
   };
-
-  console.log("Selected Faculty:", selectedFaculty);
 
   const handleFacultySelectChange = (value) => {
     setSelectedFaculty(value);
@@ -127,7 +118,6 @@ function Page() {
 
   const handleAddWebsiteOrSelectProgramChange = (value) => {
     setAddWebsiteOrSelectProgram(value);
-    console.log("Add website or select program changed to:", value);
 
     if (value === 'addWebsite') {
       setFormWebData((prevData) => ({
@@ -143,18 +133,15 @@ function Page() {
     }
   };
 
-
   const fetchProdi = async (facultyID) => {
     try {
       const response = await fetch(`/api/institusi?id=${facultyID}`)
-
       if (response.ok) {
         const data = await response.json();
         setProgramData({ prodi_list: data.data.prodi_list || [] });
       } else {
         console.error('Failed to fetch study programs');
       }
-
     } catch (error) {
       console.error(error);
     }
@@ -166,145 +153,182 @@ function Page() {
       let response;
       let updatedFormWeb = { ...formWeb };
 
+      if (!updatedFormWeb.name?.trim()) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Nama harus diisi',
+        });
+        return;
+      }
+
+      if (!/^[a-zA-Z\s]+$/.test(updatedFormWeb.name)) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Nama hanya boleh mengandung huruf dan spasi',
+        });
+        return;
+      }
+
       if (session?.user?.role === 'Super Admin') {
         if (selectedOption === 'Universitas') {
+         
+          if (!updatedFormWeb.link?.trim()) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Tautan website harus diisi',
+            });
+            return;
+          }
           updatedFormWeb.department_id = process.env.NEXT_PUBLIC_UNIVERSITY_ID;
           updatedFormWeb.type = 'Universitas';
-        } else if (selectedOption === 'Fakultas') {
-          updatedFormWeb.type = 'Fakultas';
-          if (!isDataExist) {
-            updatedFormWeb.ref_ids = [process.env.NEXT_PUBLIC_UNIVERSITY_ID];
-          } else {
-            updatedFormWeb.department_id = selectedFaculty;
-          }
-        }
-      } else if (session?.user?.type === 'Prodi') {
-        updatedFormWeb.department_id = session.user.departementId;
-        updatedFormWeb.type = 'Prodi';
-      } else {
-        if (addWebsiteOrSelectProgram === 'addWebsite') {
-          updatedFormWeb.department_id = session.user.departementId;
-          updatedFormWeb.type = 'Fakultas';
-        } else if (addWebsiteOrSelectProgram === 'selectProgram') {
-          updatedFormWeb.type = 'Prodi';
-          if (isProgramDataExist === false) {
-            updatedFormWeb.ref_ids = [process.env.NEXT_PUBLIC_UNIVERSITY_ID, selectedFaculty];
-          } else {
-            updatedFormWeb.department_id = selectedStudyProgram;
-          }
-        }
-      }
-      console.log("Data yang akan dikirim:", updatedFormWeb);
 
-
-      if (selectedOption === 'Universitas') {
-        response = await fetch('/api/website', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updatedFormWeb)
-        });
-      } else if (addWebsiteOrSelectProgram === 'addWebsite') {
-        response = await fetch('/api/website', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updatedFormWeb)
-        });
-      } else if (addWebsiteOrSelectProgram === 'selectProgram') {
-        if (isProgramDataExist === false) {
-          response = await fetch(`/api/institusi`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              name: formWeb.name,
-              type: 'Prodi',
-              ref_ids: [process.env.NEXT_PUBLIC_UNIVERSITY_ID, selectedFaculty]
-            })
-          });
-        } else {
-          response = await fetch(`/api/website`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              name: formWeb.name,
-              link: formWeb.link,
-              type: 'Prodi',
-              department_id: selectedStudyProgram
-            })
-          });
-        }
-      } else if (selectedOption === 'Fakultas') {
-        if (!isDataExist) {
-          response = await fetch('/api/institusi', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              name: formWeb.name,
-              type: 'Fakultas',
-              ref_ids: [process.env.NEXT_PUBLIC_UNIVERSITY_ID]
-            })
-          });
-        } else {
-          response = await fetch(`/api/website`, {
+          response = await fetch('/api/website', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify(updatedFormWeb)
           });
+        } else if (selectedOption === 'Fakultas') {
+          if (!isDataExist) {
+           
+            response = await fetch('/api/institusi', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: updatedFormWeb.name,
+                type: 'Fakultas',
+                ref_ids: [process.env.NEXT_PUBLIC_UNIVERSITY_ID]
+              })
+            });
+          } else {
+           
+            if (!updatedFormWeb.link?.trim()) {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Tautan website harus diisi',
+              });
+              return;
+            }
+            updatedFormWeb.department_id = selectedFaculty;
+            response = await fetch('/api/website', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(updatedFormWeb)
+            });
+          }
         }
-      } else if (session?.user?.type === 'Prodi') {
-        response = await fetch('/api/website', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updatedFormWeb)
-        });
-      } else {
-        console.error("Tidak ada opsi yang cocok");
+      } else if (session?.user?.type === 'Fakultas') {
+        if (addWebsiteOrSelectProgram === 'addWebsite') {
+         
+          if (!updatedFormWeb.link?.trim()) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Tautan website harus diisi',
+            });
+            return;
+          }
+          updatedFormWeb.department_id = session.user.departementId;
+          updatedFormWeb.type = 'Fakultas';
+
+          response = await fetch('/api/website', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedFormWeb)
+          });
+        } else if (addWebsiteOrSelectProgram === 'selectProgram') {
+          if (isProgramDataExist === false) {
+           
+            response = await fetch('/api/institusi', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: updatedFormWeb.name,
+                type: 'Prodi',
+                ref_ids: [process.env.NEXT_PUBLIC_UNIVERSITY_ID, selectedFaculty]
+              })
+            });
+          } else {
+           
+            if (!updatedFormWeb.link?.trim()) {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Tautan website harus diisi',
+              });
+              return;
+            }
+            updatedFormWeb.department_id = selectedStudyProgram;
+            response = await fetch('/api/website', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(updatedFormWeb)
+            });
+          }
+        }
+      }
+      const data = await response.json();
+      console.log(data);
+      
+      if (!data.success) {
+        if (data.message === 'Website with this name and link already exists') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.message || 'Terjadi kesalahan' ,
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.error || 'Terjadi kesalahan',
+          });
+        }
+        return;
       }
 
-      console.log("Response dari server:", response);
+      setFormWebData({
+        name: '',
+        link: '',
+        type: '',
+        department_id: ''
+      });
 
+      Swal.fire({
+        icon: 'success',
+        title: 'Sukses',
+        text: data.message || 'Sukses menambahkan data',
+        timer: 1000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      }).then(() => {
+        window.location.reload();
+      });
 
-      if (response && response.ok) {
-        const data = await response.json();
-        console.log('Website successfully added:', data);
-        setFormWebData({
-          name: '',
-          link: '',
-          type: '',
-          department_id: ''
-        });
-        Swal.fire({
-          icon: 'success',
-          title: 'Sukses',
-          text: 'Sukses Menambahkan Data',
-          timer: 1000,
-          timerProgressBar: true,
-          showConfirmButton: false,
-        }).then(() => {
-          window.location.reload();
-        });
-      } else {
-        console.error('Failed to create post');
-      }
     } catch (error) {
       console.error('An error occurred:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Terjadi kesalahan pada server',
+      });
     }
   };
-
-
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -480,7 +504,7 @@ function Page() {
               </>
             )}
 
-            {session?.user?.role !== 'Super Admin' && (
+            {session?.user?.departmentType === 'Fakultas' && (
               <>
                 {selectedFaculty && (
                   <div className="grid gap-3">
@@ -574,7 +598,7 @@ function Page() {
               </>
             )}
 
-            {session?.user?.type === 'Prodi' && (
+            {session?.user?.departmentType === 'Prodi' && (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                 <div>
                   <Label htmlFor="study-program-web-name">Nama Website Program Studi</Label>

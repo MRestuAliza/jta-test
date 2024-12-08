@@ -35,16 +35,12 @@ export function Saran() {
         }
     }, [status]);
 
-    console.log("adviceUser", adviceUser.length);
-
 
     const fetchAdviceUser = async () => {
         try {
             const res = await fetch(`/api/saran?userId=${session?.user?.id}`);
-
             if (res.ok) {
                 const data = await res.json();
-
                 setAdviceUser(data.data);
             } else {
                 throw new Error('Network response was not ok');
@@ -90,7 +86,7 @@ export function Saran() {
                                                 <TableHead className="hidden sm:table-cell">
                                                     Saran Untuk
                                                 </TableHead>
-                                                <TableHead className="hidden sm:table-cell">
+                                                <TableHead className="sm:table-cell">
                                                     Status
                                                 </TableHead>
                                                 <TableHead className="hidden md:table-cell">
@@ -112,7 +108,7 @@ export function Saran() {
                                                         <TableCell className="hidden sm:table-cell">
                                                             {advice.group_name}
                                                         </TableCell>
-                                                        <TableCell className="hidden sm:table-cell">
+                                                        <TableCell className="sm:table-cell">
                                                             <Badge className="text-xs" variant="secondary">
                                                                 {advice.status}
                                                             </Badge>

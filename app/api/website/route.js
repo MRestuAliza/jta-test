@@ -1,10 +1,7 @@
 import { connectMongoDB } from "@/libs/mongodb";
-
 import mongoose from "mongoose";
-import { getSession } from "next-auth/react";
-import Website from "@/models/tes/webSchema";
-import GroupSaran from "@/models/tes/groupSaranSchema";
-import Departement from "@/models/tes/departementSchema";
+import Website from "@/models/webSchema";
+import Departement from "@/models/departementSchema";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import xss from "xss";
@@ -95,7 +92,6 @@ export async function GET(req, { params }) {
     }
 }
 
-
 export async function POST(req, res) {
     try {
         const body = await req.json();
@@ -120,19 +116,41 @@ export async function POST(req, res) {
         }
         await connectMongoDB();
 
-        const existingWeb = await Website.findOne({
-            $or: [{ name: body.cleanName }, { link: body.cleanLink }],
+        const existingWebByName = await Website.findOne({
+            name: cleanName,
+            ref_id: refId
         });
 
-        if (existingWeb) {
-            return NextResponse.json({
-                success: false,
-                message: 'Name or link already exists',
-                errors: {
-                    name: existingWeb.name === cleanName ? 'Name already exists' : null,
-                    link: existingWeb.link === cleanLink ? 'Link already exists' : null,
-                }
-            }, { status: 409 });
+        if (existingWebByName) {
+            if (existingWebByName.link !== cleanLink) {
+                const newWebsite = await Website.create({
+                    _id: id,
+                    name: cleanName,
+                    link: cleanLink,
+                    type: cleanType,
+                    ref_id: refId,
+                    ref_model: refModel,
+                    link_advice: uniqueLink,
+                    department_id: cleanUniversityId,
+                });
+
+                return new NextResponse(
+                    JSON.stringify({
+                        success: true,
+                        message: "Website created successfully with different link",
+                        data: newWebsite
+                    }),
+                    { status: 201 }
+                );
+            } else {
+                return NextResponse.json({
+                    success: false,
+                    message: 'Website with this name and link already exists',
+                    errors: {
+                        name: 'Website name already exists with the same link'
+                    }
+                }, { status: 409 });
+            }
         }
 
         const newWebsite = await Website.create({
@@ -146,18 +164,10 @@ export async function POST(req, res) {
             department_id: cleanUniversityId,
         });
 
-        // const newGroupSaran = await GroupSaran.create({
-        //     _id: websiteId,
-        //     name: cleanName,
-        //     type: cleanType,
-        //     link: uniqueLink,
-        //     website_id: newWebsite._id,
-        // });
-
         return new NextResponse(
             JSON.stringify({
                 success: true,
-                message: "Website and Group Saran created successfully",
+                message: "Website created successfully",
                 data: newWebsite
             }),
             { status: 201 }

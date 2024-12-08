@@ -1,7 +1,6 @@
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import User from '@/models/userSchema';
-import Departement from '@/models/tes/departementSchema'; // Pastikan path sesuai
 import { connectMongoDB } from "@/libs/mongodb";
 import bcrypt from 'bcryptjs';
 
@@ -11,32 +10,40 @@ export const authOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
       },
       authorize: async (credentials) => {
         try {
           await connectMongoDB();
           const user = await User.findOne({ email: credentials.email });
-          let departementId = null;
-
-          if (user && bcrypt.compareSync(credentials.password, user.password)) {
-            if (user.role.startsWith('Admin')) {
-              const departmentName = user.role.replace('Admin ', '').trim();
-              const departement = await Departement.findOne({ name: departmentName });
-              if (departement) {
-                departementId = departement._id;
-                type = departement.type;
-              }
-            }
-            return { id: user._id, name: user.name, email: user.email, role: user.role, departementId };
-          } else {
-            throw new Error('InvalidCredentials');
+    
+          if (!user) {
+            throw new Error('EmailNotFound');
           }
+    
+          if (user && !bcrypt.compareSync(credentials.password, user.password)) {
+            throw new Error('InvalidPassword');
+          }
+    
+          return {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            departementId: user.departementId,
+            departmentType: user.departmentType,
+          };
         } catch (error) {
           console.error('Error in authorization:', error);
-          throw new Error('AuthorizationFailed');
+          if (error.message === 'EmailNotFound') {
+            throw new Error('Email tidak ditemukan.');
+          } else if (error.message === 'InvalidPassword') {
+            throw new Error('Kata sandi salah.');
+          } else {
+            throw new Error('Otorisasi Gagal');
+          }
         }
-      }
+      },
     }),
     GoogleProvider({
       clientId: process.env.GOOGLE_ID,
@@ -44,7 +51,7 @@ export const authOptions = {
     }),
   ],
   pages: {
-    signIn: '/', // Sesuaikan dengan halaman sign-in Anda, jika ada
+    signIn: '/',
   },
   secret: process.env.SECRET,
   session: {
@@ -66,26 +73,19 @@ export const authOptions = {
           token.id = userInDb._id;
           token.role = userInDb.role;
           token.googleId = userInDb.googleId;
-
-          if (userInDb.role.startsWith('Admin')) {
-            const departmentName = userInDb.role.replace('Admin ', '').trim();
-            const departement = await Departement.findOne({ name: departmentName });
-            if (departement) {
-              token.departementId = departement._id;
-              token.type = departement.type;
-            }
-          }
+          token.departementId = userInDb.departementId;  // Add this line
+          token.departmentType = userInDb.departmentType;  // Add this line
         }
       }
       console.log("Token after setting role and departementId in jwt:", token);
-      return { ...token };
+      return token;  // Changed from { ...token }
     },
     async session({ session, token }) {
       session.user.id = token.id;
       session.user.role = token.role;
       session.user.googleId = token.googleId;
-      session.user.type = token.type;
-      session.user.departementId = token.departementId;
+      session.user.departementId = token.departementId;  // Add this line
+      session.user.departmentType = token.departmentType;  // Add this line
       console.log("Session after setting role and departementId:", session);
       return session;
     },
@@ -109,18 +109,10 @@ export const authOptions = {
               await existingUser.save();
             }
           }
-          
           user.id = existingUser._id;
           user.role = existingUser.role;
-
-          if (existingUser.role.startsWith('Admin')) {
-            const departmentName = existingUser.role.replace('Admin ', '').trim();
-            const departement = await Departement.findOne({ name: departmentName });
-            if (departement) {
-              user.departementId = departement._id;
-              user.type = departement.type;
-            }
-          }
+          user.departementId = existingUser.departementId;
+          user.departmentType = existingUser.departmentType;
           return true;
         } catch (error) {
           console.error('Error during Google sign in:', error);

@@ -10,12 +10,15 @@ import {
     Mail,
     List,
     ListPlus,
-    CircleUser,
+    ChevronRight,
     Users2,
 } from "lucide-react";
 import {
     Breadcrumb,
     BreadcrumbItem,
+    BreadcrumbSeparator,
+    BreadcrumbEllipsis,
+    BreadcrumbPage,
     BreadcrumbLink,
     BreadcrumbList,
 } from "@/components/ui/breadcrumb"
@@ -31,20 +34,24 @@ import {
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from "next-auth/react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useDepartment } from '@/contexts/DepartmentContext';
 
-const Header = ({ BreadcrumbLinkTitle }) => {
+const Header = () => {
     const { status, data: session } = useSession();
     const router = usePathname();
-    const routerSegements = router.split("/").filter(segments => segments);
-    const path = `/${routerSegements[0]}`;
+    // const pathSegments = router.split("/").filter(segments => segments);
+    const pathSegments = router.split("/").filter(segments => segments && segments !== "board");
+    const path = `/${pathSegments[0]}`;
     const [photoURL, setPhotoURL] = useState();
     const role = session?.user?.role;
+    const { getNameFromId } = useDepartment();
 
     useEffect(() => {
         if (status === "authenticated") {
             fetchData();
         }
     }, [session, status]);
+
 
     const fetchData = async () => {
         if (!session?.user?.id) return;
@@ -60,8 +67,46 @@ const Header = ({ BreadcrumbLinkTitle }) => {
             console.error("Error fetching user data:", error);
         }
     };
-    console.log("ads", photoURL);
-    
+
+    const fetchDepartmentName = async (id) => {
+        try {
+            const response = await fetch(`/api/institusi?id=${id}`);
+            const data = await response.json();
+
+            if (response.ok && data.data) {
+                const name = data.data.fakultas_websites?.[0]?.name ||
+                    data.data.prodi_websites?.[0]?.name ||
+                    data.data.university_websites?.[0]?.name ||
+                    id;
+                setDepartmentName(name);
+            }
+        } catch (error) {
+            console.error("Error fetching department name:", error);
+            setDepartmentName(id);
+        }
+    };
+
+    const getBreadcrumbLabel = (segment) => {
+        switch (segment) {
+            case 'dashboard':
+                return 'Dashboard';
+            case 'departements':
+                return 'Departements';
+            case 'add-departements':
+                return 'Add Departements';
+            case 'users':
+                return 'Users';
+            case 'saran':
+                return 'Saran';
+            case 'settings':
+                return 'Settings';
+            case 'mahasiswa':
+                return 'Mahasiswa';
+            default:
+                return segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
+        }
+    };
+
     const menuItems = {
         admin: [
             { href: "/dashboard", icon: <Home className="h-5 w-5" />, label: "Beranda" },
@@ -107,25 +152,122 @@ const Header = ({ BreadcrumbLinkTitle }) => {
                     </nav>
                 </SheetContent>
             </Sheet>
-            <Breadcrumb className="hidden md:flex">
+            <Breadcrumb className="hidden md:flex max-w-full overflow-hidden">
+                {/* <BreadcrumbList>
+                    <BreadcrumbItem>
+                        <BreadcrumbLink href="/dashboard">Beranda</BreadcrumbLink>
+                    </BreadcrumbItem>
+
+                    {pathSegments.length > 2 && (
+                        <>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger className="flex items-center gap-1">
+                                        <BreadcrumbEllipsis className="h-4 w-4" />
+                                        <span className="sr-only">Toggle menu</span>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        {pathSegments.slice(0, -1).map((segment, index) => (
+                                            <DropdownMenuItem key={index}>
+                                                <Link
+                                                    href={`/${pathSegments.slice(0, index + 1).join('/')}`}
+                                                    className="w-full"
+                                                >
+                                                    {getBreadcrumbLabel(segment)}
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </BreadcrumbItem>
+                        </>
+                    )}
+
+                    {pathSegments.length > 0 && (
+                        <>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                {pathSegments.length === 1 ? (
+                                    <BreadcrumbPage>
+                                        {getBreadcrumbLabel(pathSegments[0])}
+                                    </BreadcrumbPage>
+                                ) : (
+                                    <BreadcrumbLink href={`/${pathSegments[0]}`}>
+                                        {getBreadcrumbLabel(pathSegments[0])}
+                                    </BreadcrumbLink>
+                                )}
+                            </BreadcrumbItem>
+                        </>
+                    )}
+
+                    {pathSegments.length > 1 && (
+                        <>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>
+                                    {getBreadcrumbLabel(pathSegments[pathSegments.length - 1])}
+                                </BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </>
+                    )}
+                </BreadcrumbList> */}
                 <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink asChild>
-                            <Link href="#">{BreadcrumbLinkTitle}</Link>
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    {/* <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink asChild</DropdownMenuTrigger>>
-                            <Link href="#">Orders</Link>
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage>Recent Orders</BreadcrumbPage>
-                    </BreadcrumbItem> */}
+                    {pathSegments.map((segment, index) => {
+                        const name = getNameFromId(segment);
+                        console.log('Segment:', segment, 'Name:', name); // Untuk debugging
+                        return (
+                            <React.Fragment key={segment}>
+                                <BreadcrumbItem>
+                                    <BreadcrumbLink href={`/${pathSegments.slice(0, index + 1).join('/')}`}>
+                                        {name}
+                                    </BreadcrumbLink>
+                                </BreadcrumbItem>
+                                {index < pathSegments.length - 1 && <BreadcrumbSeparator />}
+                            </React.Fragment>
+                        );
+                    })}
                 </BreadcrumbList>
             </Breadcrumb>
+            {/* Mobile breadcrumb */}
+            <div className="md:hidden flex items-center space-x-1 text-sm">
+                <Link
+                    href="/dashboard"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                    Beranda
+                </Link>
+                {pathSegments.length > 0 && (
+                    <>
+                        <span className="text-muted-foreground">/</span>
+                        {pathSegments.length > 1 ? (
+                            <>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger className="flex items-center gap-1">
+                                        <BreadcrumbEllipsis className="h-4 w-4" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        {pathSegments.slice(0, -1).map((segment, index) => (
+                                            <DropdownMenuItem key={index}>
+                                                <Link
+                                                    href={`/${pathSegments.slice(0, index + 1).join('/')}`}
+                                                    className="w-full"
+                                                >
+                                                    {getBreadcrumbLabel(segment)}
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <span className="text-muted-foreground">/</span>
+                            </>
+                        ) : null}
+                        <span className="max-w-[150px] truncate">
+                            {getBreadcrumbLabel(pathSegments[pathSegments.length - 1])}
+                        </span>
+                    </>
+                )}
+            </div>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button

@@ -6,8 +6,8 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import Sidebar from "@/components/General/Sidebar";
 import { ChevronDown, Building2, Globe } from "lucide-react";
 import Header from "@/components/General/Header";
-import { useRouter, redirect } from 'next/navigation';
-import { getToken } from "next-auth/jwt";
+import { useRouter } from 'next/navigation';
+import { useSession } from "next-auth/react";
 
 const SectionHeader = ({ title, count, color, onClick, textColor }) => (
   <div className={`flex justify-between items-center p-4 ${color} text-${textColor} rounded-t-lg`}>
@@ -44,6 +44,7 @@ const ListItem = ({ id, link, icon, title, url, onNewClick, adviceExists }) => {
 };
 
 export default function Portal() {
+  const { status, data: session } = useSession();
   const [openCard, setOpenCard] = useState(1);
   const [departments, setDepartments] = useState({
     university_websites: [],
@@ -61,8 +62,10 @@ export default function Portal() {
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (status === "authenticated") {
+      loadData();
+  }
+  }, [status]);
 
   const loadData = async () => {
     await fetchDepartments();

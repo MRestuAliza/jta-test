@@ -4,6 +4,7 @@ import {
   TooltipProvider
 } from "@/components/ui/tooltip"
 import { NextAuthProviders, } from "./Providers";
+import { DepartmentProvider } from '@/contexts/DepartmentContext';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +19,9 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <NextAuthProviders>
           <TooltipProvider>
-            {children}
+            <DepartmentProvider>
+              {children}
+            </DepartmentProvider>
           </TooltipProvider>
         </NextAuthProviders>
       </body>

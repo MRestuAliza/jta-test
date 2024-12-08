@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 const WebsiteSchema = new mongoose.Schema({
+    _id: {
+        type: String,
+        default: uuidv4,
+    },
     name: {
         type: String,
         required: true,
@@ -9,25 +14,23 @@ const WebsiteSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    link_advice: {
+        type: String,
+        required: true,
+    },
     type: {
         type: String,
         enum: ['Universitas', 'Fakultas', 'Prodi'],
         required: true,
     },
-    university_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Universitas',
+    ref_id: {
+        type: String,
         required: true,
     },
-    fakultas_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Fakultas',
-        default: null,
-    },
-    prodi_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Prodi',
-        default: null,
+    ref_model: {
+        type: String,
+        enum: ['Universitas', 'Fakultas', 'Prodi'],
+        required: true,
     },
     created_at: {
         type: Date,

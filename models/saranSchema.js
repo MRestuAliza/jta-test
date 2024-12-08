@@ -1,9 +1,13 @@
 import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 const SaranSchema = new mongoose.Schema({
-    groupSaranId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'GroupSaran',
+    _id: {
+        type: String,
+        default: uuidv4,
+    },
+    webId: {
+        type: String,
         required: true,
     },
     title: {
@@ -16,7 +20,7 @@ const SaranSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['new', 'in_progress', 'completed', 'cancelled'],
+        enum: ['new', 'work in progress', 'completed', 'cancelled'],
         default: 'new',
     },
     link: {
@@ -31,9 +35,13 @@ const SaranSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    votes: [{
+        _id: false,
+        userId: String,
+        voteType: Number,
+    }],
     created_by: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',  // Referensi ke skema User
+        type: String,
         required: true,
     },
     created_at: {

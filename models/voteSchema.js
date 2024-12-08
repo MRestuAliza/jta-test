@@ -1,14 +1,17 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 const VoteSchema = new mongoose.Schema({
-    saranId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Saran',
-        required: true,
+    _id: {
+        type: String,
+        default: uuidv4,
     },
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: String,
+        required: true,
+    },
+    saranId: {
+        type: String,
         required: true,
     },
     voteType: {

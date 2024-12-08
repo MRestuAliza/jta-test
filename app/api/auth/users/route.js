@@ -1,5 +1,6 @@
 import { connectMongoDB } from "@/libs/mongodb";
 import User from "@/models/userSchema";
+import Departement from "@/models/departementSchema";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from "bcryptjs";
@@ -8,41 +9,128 @@ import ImageKit from "imagekit";
 export async function GET(request) {
     try {
         const userRole = request.headers.get('X-User-Role');
+        const userDepartmentId = request.headers.get('X-User-Department-Id');
+        const userDepartmentType = request.headers.get('X-User-Department-Type');
+
+        const url = new URL(request.url);
+        const filter = url.searchParams.get('filter') || 'all';
+        const search = url.searchParams.get('search') || '';
+        const page = parseInt(url.searchParams.get('page')) || 1;
+        const limit = parseInt(url.searchParams.get('limit')) || 10;
+        const skip = (page - 1) * limit;
+
         await connectMongoDB();
 
-        let users;
-        if (userRole === 'Super Admin') {
-            users = await User.find();
-        } else if (userRole.includes('Admin')) {
-            users = await User.find({ role: { $regex: 'Admin|Mahasiswa', $options: 'i' } });
-        } else {
-            return new NextResponse(JSON.stringify({ message: "Unauthorized" }), {
-                status: 403,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+        let query = {};
+        let conditions = [];
+
+        if (filter === 'admin') {
+            conditions.push({ role: { $regex: /^Admin/ } });
+        } else if (filter === 'mahasiswa') {
+            conditions.push({ role: 'Mahasiswa' });
+        }
+
+        if (search) {
+            conditions.push({
+                $or: [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } },
+                    { nim: { $regex: search, $options: 'i' } }
+                ]
             });
         }
 
-        return new NextResponse(JSON.stringify(users), {
+        if (userRole === 'Super Admin') {
+
+        } else if (userDepartmentType === 'Fakultas') {
+            const prodiDepts = await Departement.find({
+                type: 'Prodi',
+                ref_ids: { $elemMatch: { $eq: userDepartmentId } }
+            });
+
+            const prodiDeptIds = prodiDepts.map(dept => dept._id);
+            conditions.push({
+                $or: [
+                    { departementId: userDepartmentId },
+                    { departementId: { $in: prodiDeptIds } },
+                    // Tambahkan kondisi untuk mahasiswa tanpa departementId
+                    { 
+                        role: 'Mahasiswa',
+                        $or: [
+                            { departementId: { $exists: false } },
+                            { departementId: '' },
+                            { departementId: null }
+                        ]
+                    }
+                ]
+            });
+        } else if (userDepartmentType === 'Prodi') {
+            conditions.push({
+                $or: [
+                    { departementId: userDepartmentId },
+                    // Tambahkan kondisi untuk mahasiswa tanpa departementId
+                    { 
+                        role: 'Mahasiswa',
+                        $or: [
+                            { departementId: { $exists: false } },
+                            { departementId: '' },
+                            { departementId: null }
+                        ]
+                    }
+                ]
+            });
+        } else {
+            return new NextResponse(JSON.stringify({
+                success: false,
+                message: "Unauthorized"
+            }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Combine all conditions
+        if (conditions.length > 0) {
+            query.$and = conditions;
+        }
+
+        console.log('Final Query:', JSON.stringify(query, null, 2));
+
+        const total = await User.countDocuments(query);
+        const users = await User.find(query)
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        console.log('Found Users:', users.length);
+
+        return new NextResponse(JSON.stringify({
+            success: true,
+            data: users,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        }), {
             status: 200,
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' }
         });
+
     } catch (error) {
         console.error("Error fetching users:", error);
-        return new NextResponse(JSON.stringify({ message: "Internal Server Error" }), {
+        return new NextResponse(JSON.stringify({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        }), {
             status: 500,
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 }
 
 export async function POST(request) {
-    
+
     try {
         const body = await request.json();
         body.id = uuidv4();
@@ -98,23 +186,26 @@ const imagekit = new ImageKit({
 export async function PATCH(req) {
     const url = new URL(req.url);
     const userId = url.searchParams.get("userId");
-    let newRole, name, nim, password, newPassword, profilePicture;
-    
+    let newRole, name, nim, password, newPassword, profilePicture, email, departementId, departmentType;
+
     if (req.headers.get("content-type")?.includes("multipart/form-data")) {
         const formData = await req.formData();
         name = formData.get("name");
         nim = formData.get("nim");
+        email = formData.get("email");
         password = formData.get("password");
         newPassword = formData.get("newPassword");
-        profilePicture = formData.get("profilePicture"); 
+        profilePicture = formData.get("profilePicture");
+        departementId = formData.get("departementId");
+        departmentType = formData.get("departmentType");
     } else {
-        ({ newRole, name, nim, password, newPassword, profilePicture } = await req.json());
+        ({ newRole, name, nim, password, newPassword, profilePicture, email, departementId, departmentType } = await req.json());
     }
 
     try {
         await connectMongoDB();
         const user = await User.findById(userId);
-        
+
 
         if (!user) {
             return new NextResponse(
@@ -131,13 +222,47 @@ export async function PATCH(req) {
                 }
             );
         }
-        if (newRole) user.role = newRole;
+        if (newRole) {
+            user.role = newRole;
+            if (newRole.startsWith('Admin')) {
+                if (!departementId || !departmentType) {
+                    return new NextResponse(
+                        JSON.stringify({
+                            status: false,
+                            message: "Department ID and Type are required for Admin roles",
+                        }), { status: 400 }
+                    );
+                }
+                user.departementId = departementId;
+                user.departmentType = departmentType;
+            } else {
+                user.departementId = undefined;
+                user.departmentType = undefined;
+            }
+        }
+
         if (name) user.name = name;
         if (nim) user.nim = nim;
+        if (email) {
+            const existingUser = await User.findOne({
+                email,
+                _id: { $ne: userId }
+            });
+
+            if (existingUser) {
+                return new NextResponse(
+                    JSON.stringify({
+                        status: false,
+                        message: "Email already in use",
+                    }), { status: 400 }
+                );
+            }
+            user.email = email;
+        }
         if (user.loginProvider === "credentials" && password && newPassword) {
             const isMatch = await bcrypt.compare(password, user.password);
-            
-            
+
+
 
             if (!isMatch) {
                 return new NextResponse(
@@ -148,11 +273,11 @@ export async function PATCH(req) {
                     { status: 400 }
                 );
             }
-        
+
             const hashedNewPassword = await bcrypt.hash(newPassword, 12);
             user.password = hashedNewPassword;
         }
-        
+
         if (profilePicture && profilePicture.size > 0) {
             const validExtensions = ["image/jpeg", "image/jpg", "image/png"];
             const MAX_FILE_SIZE = 2 * 1024 * 1024;
