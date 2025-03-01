@@ -363,8 +363,8 @@ export function Dashboard() {
                                             <TableBody>
                                                 {lastAdvice.length > 0 ? (
                                                     lastAdvice.map((advice) => (
-                                                        <TableRow className="">
-                                                            <TableCell key={advice._id}>
+                                                        <TableRow key={advice._id} className="">
+                                                            <TableCell>
                                                                 <div className="font-medium">{advice.title}</div>
                                                                 <div className="hidden text-sm text-muted-foreground md:inline">
                                                                     {advice.description}

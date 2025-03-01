@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
-export default function ResetPassword() {
+export function ResetPassword() {
     const searchParams = useSearchParams()
     const router = useRouter()
     console.log("ini router",router);
@@ -168,3 +168,5 @@ export default function ResetPassword() {
         </div>
     )
 }
+
+export default ResetPassword;

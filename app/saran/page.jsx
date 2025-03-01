@@ -97,8 +97,7 @@ function AdvicePage() {
             </div>
         </div>
     );
-
-    // Pagination component
+    
     const CustomPagination = () => {
         const handlePageChange = (page) => {
             setCurrentPage(page);
@@ -294,7 +293,7 @@ function AdvicePage() {
                                                         <TableRow>
                                                             <TableCell colSpan={5} className="text-center">
                                                                 <div className="text-muted-foreground">
-                                                                    Data &quot;{searchQuery}" tidak ditemukan
+                                                                    Data &quot;{searchQuery}&quot; tidak ditemukan
                                                                 </div>
                                                             </TableCell>
                                                         </TableRow>

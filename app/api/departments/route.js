@@ -6,11 +6,11 @@ export async function GET(request) {
     try {
         await connectMongoDB();
 
-        const url = new URL(request.url);
-        const searchQuery = url.searchParams.get("search") || "";
-        const page = parseInt(url.searchParams.get("page")) || 1;
-        const limit = parseInt(url.searchParams.get("limit")) || 10;
-        const filter = url.searchParams.get("filter") || "all";
+        const { searchParams } = request.nextUrl;
+        const searchQuery = searchParams.get("search") || "";
+        const page = parseInt(searchParams.get("page")) || 1;
+        const limit = parseInt(searchParams.get("limit")) || 10;
+        const filter = searchParams.get("filter") || "all";
 
         let query = {
             ref_ids: { $exists: true, $ne: [] }

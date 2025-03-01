@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -98,8 +98,8 @@ export function Saran() {
                                         <TableBody>
                                             {adviceUser.length > 0 ? (
                                                 adviceUser.map((advice) => (
-                                                    <TableRow className="">
-                                                        <TableCell key={advice.id}>
+                                                    <TableRow key={advice.id} className="">
+                                                        <TableCell>
                                                             <div className="font-medium">{advice.title}</div>
                                                             <div className="hidden text-sm text-muted-foreground md:inline">
                                                                 {advice.description}
