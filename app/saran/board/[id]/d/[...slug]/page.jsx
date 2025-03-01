@@ -28,6 +28,8 @@ function DetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingReplayComment, setIsSubmittingReplayComment] = useState(false);
   const params = useParams();
+  console.log("tes paramss", params);
+  
   const slug = params.slug || [];
   const { status, data: session } = useSession();
 

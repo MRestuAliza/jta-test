@@ -74,7 +74,7 @@ function DepartmentPage() {
         response = await fetch(
           `/api/institusi?id=${session?.user?.departementId}&role=${session?.user?.role}&page=${page}&limit=10`
         );
-        
+
         const data = await response.json();
         if (session?.user?.departmentType === "Prodi") {
           combinedData = data.data.prodi_websites || [];
@@ -387,83 +387,93 @@ function DepartmentPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {departments.map((department) => {
-                            return (
-                              <TableRow key={department._id || department.id}>
-                                <TableCell>
-                                  <div className="font-medium">
-                                    {department.name}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="hidden sm:table-cell">
-                                  {department.link || "-"}
-                                </TableCell>
-                                <TableCell className="hidden sm:table-cell">
-                                  <Badge className="text-xs" variant="secondary">
-                                    {department.type}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                  {department.updated_at
-                                    ? formatDate(department.updated_at)
-                                    : "-"}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        className="h-8 w-8"
-                                      >
-                                        <MoreVertical className="h-3.5 w-3.5" />
-                                        <span className="sr-only">More</span>
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem>
-                                        {department.link_advice ? (
-                                          <Link
-                                            className="w-full"
-                                            href={`/saran/${department.link_advice}`}
-                                          >
-                                            Open
-                                          </Link>
-                                        ) : (
-                                          <Link
-                                            className="w-full"
-                                            href={`/departements/${department._id || department.id
-                                              }`}
-                                          >
-                                            Open
-                                          </Link>
-                                        )}
-                                      </DropdownMenuItem>
+                          {departments.length > 0 ? (
+                            departments.map((department) => {
+                              return (
+                                <TableRow key={department._id || department.id}>
+                                  <TableCell>
+                                    <div className="font-medium">
+                                      {department.name}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden sm:table-cell">
+                                    {department.link || "-"}
+                                  </TableCell>
+                                  <TableCell className="hidden sm:table-cell">
+                                    <Badge className="text-xs" variant="secondary">
+                                      {department.type}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="hidden md:table-cell">
+                                    {department.updated_at
+                                      ? formatDate(department.updated_at)
+                                      : "-"}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          size="icon"
+                                          variant="outline"
+                                          className="h-8 w-8"
+                                        >
+                                          <MoreVertical className="h-3.5 w-3.5" />
+                                          <span className="sr-only">More</span>
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem>
+                                          {department.link_advice ? (
+                                            <Link
+                                              className="w-full"
+                                              href={`/saran/${department.link_advice}`}
+                                            >
+                                              Open
+                                            </Link>
+                                          ) : (
+                                            <Link
+                                              className="w-full"
+                                              href={`/departements/${department._id || department.id
+                                                }`}
+                                            >
+                                              Open
+                                            </Link>
+                                          )}
+                                        </DropdownMenuItem>
 
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          setEditId(department._id || department.id)
-                                        }
-                                      >
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-red-500"
-                                        onClick={() =>
-                                          setDeleteId(
-                                            department._id || department.id
-                                          )
-                                        }
-                                      >
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            setEditId(department._id || department.id)
+                                          }
+                                        >
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-red-500"
+                                          onClick={() =>
+                                            setDeleteId(
+                                              department._id || department.id
+                                            )
+                                          }
+                                        >
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center">
+                                <div className="text-muted-foreground">
+                                  Data tidak ditemukan
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
                     </div>

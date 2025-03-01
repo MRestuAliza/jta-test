@@ -98,7 +98,6 @@ function Page() {
     }
   }, [status, session, currentPage, searchQuery, activeTab]);
 
-
   const fetchUsers = async (page, filter = 'all') => {
     setIsLoading(true);
     try {
@@ -106,6 +105,7 @@ function Page() {
         const response = await fetch(
           `/api/auth/users?page=${page}&limit=${itemsPerPage}&filter=${filter}&search=${searchQuery}`, {
           headers: {
+            "Authorization" : `Bearer ${session.accessToken}`,
             "X-User-Role": session.user.role,
             "X-User-Department-Id": session.user.departementId || '',
             "X-User-Department-Type": session.user.departmentType || ''
@@ -537,7 +537,6 @@ function DialogDemo({ isOpen, onClose, user }) {
         updateData.departementId = department._id;
         updateData.departmentType = department.type;
       } else {
-        // For non-admin roles, exclude departmentId and departmentType from update
         updateData.departementId = null;
         updateData.departmentType = null;
       }

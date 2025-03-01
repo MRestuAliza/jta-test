@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/tabs";
 import withAuth from '@/libs/withAuth';
 
+
 function AdvicePage() {
     const { status, data: session } = useSession();
     const [advices, setAdvices] = useState([]);
@@ -87,8 +88,7 @@ function AdvicePage() {
 
         return matchesType && matchesSearchQuery;
     });
-
-    // Loading overlay component
+    
     const LoadingOverlay = () => (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm">
             <div className="flex items-center gap-2 rounded-md bg-background p-4 shadow-md">

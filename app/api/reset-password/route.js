@@ -42,11 +42,7 @@ export async function POST(req) {
                 status: 400,
             });
         }
-
-        // Hash password baru
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        // Update password dan hapus token reset
         user.password = hashedPassword;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpiry = undefined;

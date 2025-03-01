@@ -20,9 +20,7 @@ export async function GET(req) {
             }
 
             let saranCounts = {};
-
             if (department.type === "Fakultas") {
-                // Get fakultas websites first
                 const fakultasWebsites = await Website.aggregate([
                     {
                         $match: {
@@ -44,18 +42,15 @@ export async function GET(req) {
                         }
                     }
                 ]);
-        
-                // Add fakultas websites to saranCounts
+
                 fakultasWebsites.forEach(website => {
                     saranCounts[website.name] = website.saranCount;
                 });
-        
-                // Then get all prodi under this fakultas and their saran counts
+
                 const prodiList = await Departement.find(
                     { ref_ids: id, type: 'Prodi' }
                 ).lean();
-        
-                // Get saran counts for each prodi
+
                 await Promise.all(
                     prodiList.map(async (prodi) => {
                         const prodiSaranCount = await Website.aggregate([

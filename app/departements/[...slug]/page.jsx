@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/General/Sidebar";
 import Header from "@/components/General/Header";
-import { ArrowUpRight, Search, MoreVertical, Loader2 } from "lucide-react";
+import { MoreVertical, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

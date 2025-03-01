@@ -57,17 +57,6 @@ export function LoginForm() {
 
         }
     };
-    const handleGoogleSignIn = async () => {
-        const googleRes = await signIn('google', { redirect: false });
-        setTimeout(() => {
-            if (googleRes && googleRes.ok) {
-                console.log('Google sign-in successful, redirecting to /dashboard');
-                router.push('/dashboard');
-            } else {
-                console.log('Google sign-in failed:', googleRes?.error);
-            }
-        }, 500);
-    };
 
     return (
         <div className="flex items-center justify-center h-screen">
@@ -113,9 +102,6 @@ export function LoginForm() {
                                 {loadingForm ? <Loading /> : "Login"}
                             </Button>
                         </form>
-                        <Button onClick={handleGoogleSignIn} variant="outline" className="w-full pt-2">
-                            Login with Google
-                        </Button>
                     </div>
                     <div className="mt-4 text-center text-sm">
                         Don&apos;t have an account?{" "}

@@ -5,7 +5,6 @@ import {
     Mail,
     Users,
     Loader2,
-    ChevronRight
 } from "lucide-react"
 import {
     ChartContainer,
@@ -13,7 +12,6 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
     Card,
     CardContent,
@@ -38,6 +36,8 @@ import { Label, Pie, PieChart } from "recharts"
 
 export function Dashboard() {
     const { status, data: session } = useSession();
+    console.log("session", session);
+    
     const [currentDisplayed, setCurrentDisplayed] = useState(0);
     const [saranList, setSaranList] = useState([]);
     const [lastAdvice, setLastAdvice] = useState([]);
@@ -66,13 +66,9 @@ export function Dashboard() {
     }, [status]);
 
     const loadData = async () => {
-        await Promise.all([
-            fetchSaranCount(),
-            fetchSaranListCount(),
-            fetchLastAdvice(),
-            fetchRoleCount()
-        ]);
-    }
+        await Promise.all([fetchSaranCount(), fetchSaranListCount(), fetchLastAdvice(), fetchRoleCount()]);
+    };
+
 
     const isLoading = useMemo(() =>
         Object.values(loadingStates).some(state => state),
@@ -223,44 +219,25 @@ export function Dashboard() {
                 <main className="p-4 space-y-4">
                     {isLoading && <LoadingOverlay />}
                     <div className={`transition-all duration-300 space-y-4 ${isLoading ? 'opacity-40 pointer-events-none blur-sm' : ''}`}>
-                        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-                            <Card x-chunk="dashboard-01-chunk-1">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardDescription>Total Saran</CardDescription>
-                                    <Mail className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{currentDisplayed}</div>
-                                </CardContent>
-                            </Card>
-                            <Card x-chunk="dashboard-05-chunk-2">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardDescription>Total Super Admin</CardDescription>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{userCount.superAdmin}</div>
-                                </CardContent>
-                            </Card>
-                            <Card x-chunk="dashboard-05-chunk-3">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardDescription>Total Admin</CardDescription>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{userCount.admin}</div>
-                                </CardContent>
-                            </Card>
-                            <Card x-chunk="dashboard-05-chunk-4">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardDescription>Total Mahasiswa</CardDescription>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{userCount.mahasiswa}</div>
-                                </CardContent>
-                            </Card>
+                        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                            {[
+                                { label: "Total Saran", value: currentDisplayed, icon: <Mail className="h-4 w-4 text-muted-foreground" /> },
+                                { label: "Total Super Admin", value: userCount.superAdmin, icon: <Users className="h-4 w-4 text-muted-foreground" /> },
+                                { label: "Total Admin", value: userCount.admin, icon: <Users className="h-4 w-4 text-muted-foreground" /> },
+                                { label: "Total Mahasiswa", value: userCount.mahasiswa, icon: <Users className="h-4 w-4 text-muted-foreground" /> }
+                            ].map(({ label, value, icon }, index) => (
+                                <Card key={index}>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardDescription>{label}</CardDescription>
+                                        {icon}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{value}</div>
+                                    </CardContent>
+                                </Card>
+                            ))}
                         </div>
+
 
                         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
                             <Card className="flex flex-col">

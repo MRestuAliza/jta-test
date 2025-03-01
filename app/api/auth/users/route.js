@@ -53,7 +53,6 @@ export async function GET(request) {
                 $or: [
                     { departementId: userDepartmentId },
                     { departementId: { $in: prodiDeptIds } },
-                    // Tambahkan kondisi untuk mahasiswa tanpa departementId
                     { 
                         role: 'Mahasiswa',
                         $or: [
@@ -68,7 +67,6 @@ export async function GET(request) {
             conditions.push({
                 $or: [
                     { departementId: userDepartmentId },
-                    // Tambahkan kondisi untuk mahasiswa tanpa departementId
                     { 
                         role: 'Mahasiswa',
                         $or: [
@@ -88,8 +86,6 @@ export async function GET(request) {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-
-        // Combine all conditions
         if (conditions.length > 0) {
             query.$and = conditions;
         }
