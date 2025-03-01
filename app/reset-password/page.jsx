@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -10,10 +10,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
-export function ResetPassword() {
+function ResetPasswordComponent() {
     const searchParams = useSearchParams()
     const router = useRouter()
-    console.log("ini router",router);
     const token = searchParams.get('token')
 
     const [formData, setFormData] = useState({
@@ -166,6 +165,14 @@ export function ResetPassword() {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+export function ResetPassword() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ResetPasswordComponent />
+        </Suspense>
     )
 }
 

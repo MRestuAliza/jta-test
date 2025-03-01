@@ -6,7 +6,8 @@ export async function GET(request) {
     try {
         await connectMongoDB();
 
-        const { searchParams } = request.nextUrl;
+        const url = new URL(request.url);
+        const searchParams = url.searchParams;
         const searchQuery = searchParams.get("search") || "";
         const page = parseInt(searchParams.get("page")) || 1;
         const limit = parseInt(searchParams.get("limit")) || 10;
