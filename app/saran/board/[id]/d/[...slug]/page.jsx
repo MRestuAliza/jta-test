@@ -21,7 +21,7 @@ function DetailPage() {
     saran_id: ""
   });
   const [detailAdvice, setDetailAdvice] = useState([]);
-  const [notFound, setNotFound] = useState(false);
+  // const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [comments, setComments] = useState([]);
   const [userVotes, setUserVotes] = useState({});
@@ -160,7 +160,6 @@ function DetailPage() {
       setDetailAdvice(data.data);
     } catch (error) {
       console.error("Error fetching detail:", error);
-      setNotFound(true);
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +200,6 @@ function DetailPage() {
     }
   };
 
-  // Handle voting
   const handleVote = debounce(async (commentsId, type) => {
     const voteType = type === "upvote" ? 1 : -1;
     try {
@@ -244,9 +242,9 @@ function DetailPage() {
     }
   }, 500);
 
-  if (notFound) {
-    return <NotFound />;
-  }
+  // if (notFound) {
+  //   return <NotFound />;
+  // }
 
 
   return (

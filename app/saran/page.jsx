@@ -294,7 +294,7 @@ function AdvicePage() {
                                                         <TableRow>
                                                             <TableCell colSpan={5} className="text-center">
                                                                 <div className="text-muted-foreground">
-                                                                    Data "{searchQuery}" tidak ditemukan
+                                                                    Data &quot;{searchQuery}" tidak ditemukan
                                                                 </div>
                                                             </TableCell>
                                                         </TableRow>
